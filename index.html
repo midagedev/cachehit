@@ -37,10 +37,12 @@
         매일 쓰지만 정확히는 모르는 것들을 물어봅니다.
       </p>
 
-      <div class="meta-row">
-        <span><b id="intro-count">–</b>문항</span>
-        <span><b id="intro-minutes">–</b>분</span>
-        <span>4지선다</span>
+      <div class="len-pick">
+        <div class="len-btns" role="group" aria-label="문항 수">
+          <button class="btn btn-len" data-len="10" aria-pressed="true">10문항</button>
+          <button class="btn btn-len" data-len="20" aria-pressed="false">20문항</button>
+        </div>
+        <p class="len-note"><b id="intro-minutes">–</b>분 예상 · 4지선다 · 주제 5개에서 골고루</p>
       </div>
 
       <button id="btn-start" class="btn btn-primary btn-lg">시작하기</button>
@@ -102,7 +104,10 @@
         </div>
         <p id="explanation" class="explanation"></p>
         <p id="source" class="source"></p>
-        <button id="btn-next" class="btn btn-primary">다음</button>
+        <div class="fb-actions">
+          <button id="btn-next" class="btn btn-primary">다음</button>
+          <button id="btn-copy-q" class="btn btn-ghost" title="문항·보기·해설을 마크다운으로 복사합니다. Claude나 노트에 붙여넣어 더 파고들 때 쓰세요.">문항 복사</button>
+        </div>
       </div>
     </article>
   </section>

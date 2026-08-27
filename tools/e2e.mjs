@@ -36,8 +36,17 @@ const ANSWER = new Map(
   JSON.parse(fs.readFileSync(path.join(ROOT, 'data/questions.json'), 'utf8'))
     .map((q) => [q.question, q.options.find((o) => o.correct).text]))
 
+const SITE_MARK = 'midagedev.github.io/cachehit'
+
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 900, height: 1200 } })
+// https 로 서빙한다 — clipboard API 는 보안 컨텍스트에서만 존재하고, 문항 복사가
+// 실제로 쓰는 경로가 그것이다. 라우팅으로 응답을 만들어 주므로 진짜 TLS 는 없다.
+const context = await browser.newContext({
+  viewport: { width: 900, height: 1200 },
+  permissions: ['clipboard-read', 'clipboard-write'],
+  ignoreHTTPSErrors: true,
+})
+const page = await context.newPage()
 const jsErrors = []
 page.on('pageerror', (e) => jsErrors.push(String(e)))
 page.on('console', (m) => { if (m.type() === 'error') jsErrors.push('console: ' + m.text()) })
@@ -54,10 +63,17 @@ await page.route('**/*', (route) => {
   })
 })
 
-await page.goto('http://cachehit.test/', { waitUntil: 'networkidle' })
-await page.click('#btn-start')
+await page.goto('https://cachehit.test/', { waitUntil: 'networkidle' })
 
-const tally = { hits: 0, luckyHits: 0, sureWrong: 0, guessWrong: 0 }
+// 길이 선택: 기본이 10인지 확인하고, 본 검증은 20문항 라운드로 돌린다
+const defaultLen = await page.getAttribute('.btn-len[data-len="10"]', 'aria-pressed')
+if (defaultLen !== 'true') throw new Error('기본 라운드 길이가 10문항이 아니다')
+await page.click(`.btn-len[data-len="${ROUNDS}"]`)
+await page.click('#btn-start')
+const counter = await page.textContent('#q-counter')
+if (!counter.includes(`/ ${ROUNDS}`)) throw new Error(`라운드 길이가 ${ROUNDS} 이 아니다: ${counter}`)
+
+const tally = { hits: 0, luckyHits: 0, sureWrong: 0, guessWrong: 0, withLinks: 0 }
 
 for (let i = 0; i < ROUNDS; i++) {
   await page.waitForSelector('#q-options .opt:not([disabled])')
@@ -83,6 +99,27 @@ for (let i = 0; i < ROUNDS; i++) {
   if (ok && conf === 'guess') tally.luckyHits++
   if (!ok && conf === 'guess') tally.guessWrong++
   if (!ok && conf === 'sure') tally.sureWrong++
+
+  if (i === 0) {
+    await page.click('#btn-copy-q')
+    await page.waitForFunction(() => document.querySelector('#btn-copy-q').dataset.done === '1', null, { timeout: 3000 })
+    const md = await page.evaluate(() => navigator.clipboard.readText())
+    for (const need of ['## ', '**정답**', stem.slice(0, 20), SITE_MARK])
+      if (!md.includes(need)) throw new Error(`복사된 마크다운에 "${need.slice(0, 24)}" 가 없다`)
+    if (md.split('\n').filter((l) => /^[ABCD]\. /.test(l)).length !== 4)
+      throw new Error('복사된 마크다운의 보기가 4개가 아니다')
+  }
+
+  // 원문 링크가 렌더되는지. 빌드가 sourceLinks 를 붙이지 않으면 조용히 사라지는 자리다.
+  const links = await page.$$eval('#source .source-link',
+    (as) => as.map((a) => ({ href: a.href, text: a.textContent.trim() })))
+  if (links.length) {
+    tally.withLinks++
+    for (const l of links) {
+      if (!/^https:\/\//.test(l.href)) throw new Error(`원문 링크가 https 가 아니다: ${l.href}`)
+      if (!l.text) throw new Error('원문 링크에 라벨이 없다')
+    }
+  }
 
   const verdict = await page.textContent('#verdict')
   if (conf === 'guess' && ok && !verdict.includes('찍어서 맞았습니다'))
@@ -113,6 +150,9 @@ if (tally.luckyHits && !got.line.includes(`${solid}%`)) fails.push(`결과 줄�
 if (tally.luckyHits && !got.tweet.includes(`${solid}%`)) fails.push('공유 문구에 확신 점수가 없다')
 if (tally.luckyHits && !got.retry.includes('찍은')) fails.push('재도전 버튼이 찍은 문항을 포함한다고 알리지 않는다')
 if (!got.retry.includes(String(weak))) fails.push(`재도전 대상 수 ${weak} 미표기: "${got.retry}"`)
+// 88/89 문항에 링크가 붙어 있으므로 20문항이면 거의 전부여야 한다. 크게 모자라면
+// 빌드가 sourceLinks 를 붙이지 않았거나 렌더가 끊긴 것이다.
+if (tally.withLinks < ROUNDS - 3) fails.push(`원문 링크가 보인 문항 ${tally.withLinks}/${ROUNDS} — 너무 적다`)
 
 // 결과 카드 PNG 가 그려지는지 (canvas 렌더는 예외가 나도 조용해서 여기서만 잡힌다)
 await page.click('#btn-share')
@@ -123,6 +163,7 @@ await browser.close()
 console.log(`${ROUNDS}문항 진행 — 정답 ${tally.hits} / 찍어서 맞음 ${tally.luckyHits} / 확신 오답 ${tally.sureWrong}`)
 console.log(`  ${got.line}`)
 console.log(`  재도전: ${got.retry}`)
+console.log(`  원문 링크가 보인 문항: ${tally.withLinks}/${ROUNDS}`)
 if (jsErrors.length) {
   console.log(`\nJS 오류 ${jsErrors.length}건`)
   for (const e of jsErrors) console.log(`  ✗ ${e}`)

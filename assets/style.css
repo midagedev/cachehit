@@ -108,11 +108,21 @@ body {
   margin: 0 0 14px;
 }
 .lede { color: var(--fg-dim); font-size: 1.02rem; margin: 0 0 28px; }
-.meta-row {
-  display: flex; justify-content: center; gap: 22px;
-  color: var(--fg-faint); font-size: .88rem; margin-bottom: 30px;
+.len-pick { margin-bottom: 28px; }
+.len-btns {
+  display: inline-flex; gap: 4px; padding: 4px;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px;
 }
-.meta-row b { color: var(--fg); font-size: 1rem; margin-right: 2px; }
+.btn-len {
+  padding: 8px 20px; font-size: .92rem; border: 1px solid transparent;
+  background: transparent; color: var(--fg-dim); border-radius: 9px;
+}
+.btn-len:hover { color: var(--fg); border-color: var(--line); }
+.btn-len[aria-pressed="true"] {
+  background: var(--bg); color: var(--fg); border-color: var(--line-strong);
+}
+.len-note { color: var(--fg-faint); font-size: .85rem; margin: 12px 0 0; }
+.len-note b { color: var(--fg-dim); }
 .best { margin-top: 18px; color: var(--fg-faint); font-size: .88rem; }
 .best b { color: var(--accent); }
 
@@ -201,6 +211,10 @@ a { color: var(--accent); }
 .btn-conf { min-width: 116px; }
 
 /* ── 피드백 ───────────────────────────────────────── */
+.fb-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+#btn-copy-q { font-size: .88rem; padding: 10px 16px; }
+#btn-copy-q[data-done="1"] { color: var(--ok); border-color: var(--ok); }
+
 .feedback { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
 .verdict { font-weight: 700; font-size: 1.02rem; margin-bottom: 16px; }
 .verdict[data-r="ok"] { color: var(--ok); }
@@ -225,7 +239,15 @@ a { color: var(--accent); }
   margin: 16px 0 8px; white-space: pre-line;
 }
 .source { font-size: .8rem; color: var(--fg-faint); margin: 0 0 20px; }
-#btn-next { width: 100%; }
+.source-link {
+  display: inline-block; margin: 6px 8px 0 0; padding: 3px 9px;
+  color: var(--accent); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 999px;
+  font-size: .78rem; line-height: 1.5;
+}
+.source-link::after { content: " ↗"; opacity: .6; }
+.source-link:hover { border-color: var(--accent); }
+#btn-next { flex: 1 1 auto; }
 
 /* ── 결과 ─────────────────────────────────────────── */
 .result-hero { text-align: center; padding: 5vh 0 34px; }

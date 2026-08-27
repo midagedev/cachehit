@@ -6,8 +6,10 @@
  *  - 틀린 문항만 다시 푸는 라운드를 제공한다(교정 직후 재인출).
  */
 
-const QUIZ_LENGTH = 20
+const LENGTHS = [10, 20]
+const DEFAULT_LENGTH = 10
 const STORE_KEY = 'cachehit.best.v1'
+const LEN_KEY = 'cachehit.len.v1'
 const SITE_URL = 'https://midagedev.github.io/cachehit'
 
 const TOPIC_LABEL = {
@@ -31,6 +33,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s))
 
 const state = {
   pool: [],       // 전체 문항
+  length: DEFAULT_LENGTH,
   queue: [],      // 이번 라운드 문항
   idx: 0,
   answers: [],    // { q, pickedIdx, correct, confidence }
@@ -72,9 +75,11 @@ async function load() {
   }
 
   state.pool = data.filter((q) => Array.isArray(q.options) && q.options.length === 4)
-  const n = Math.min(QUIZ_LENGTH, state.pool.length)
-  $('#intro-count').textContent = n
-  $('#intro-minutes').textContent = Math.max(3, Math.round(n * 0.5))
+
+  const saved = Number(localStorage.getItem(LEN_KEY))
+  setLength(LENGTHS.includes(saved) ? saved : DEFAULT_LENGTH)
+  $$('.btn-len').forEach((b) =>
+    b.addEventListener('click', () => setLength(Number(b.dataset.len))))
 
   const best = localStorage.getItem(STORE_KEY)
   if (best) {
@@ -83,7 +88,17 @@ async function load() {
     el.classList.remove('hidden')
   }
 
-  $('#btn-start').addEventListener('click', () => startRound(pickQuestions(n)))
+  $('#btn-start').addEventListener('click', () => startRound(pickQuestions(state.length)))
+}
+
+/* 라운드 길이. 20문항은 길다는 실사용 피드백이 있어 10을 기본으로 둔다 —
+   짧은 라운드를 끝내고 한 번 더 하는 편이, 긴 라운드를 중간에 놓는 것보다 낫다. */
+function setLength(n) {
+  state.length = Math.min(n, state.pool.length)
+  localStorage.setItem(LEN_KEY, String(n))
+  $$('.btn-len').forEach((b) =>
+    b.setAttribute('aria-pressed', String(Number(b.dataset.len) === n)))
+  $('#intro-minutes').textContent = Math.max(2, Math.round(state.length * 0.5))
 }
 
 /* 주제가 골고루 나오도록 라운드로빈으로 뽑는다 */
@@ -143,6 +158,26 @@ function renderQuestion() {
   $('#confidence').classList.add('hidden')
   $('#feedback').classList.add('hidden')
   state.pending = null
+}
+
+// 근거 줄. 텍스트만 있던 자리에 원문 링크를 함께 놓는다 — 해설을 읽고 바로 원문으로
+// 넘어갈 수 있어야 퀴즈가 학습의 입구가 된다. 링크는 빌드 때 source 텍스트에서 유도된다.
+function renderSource(q) {
+  const el = $('#source')
+  el.innerHTML = ''
+  if (!q.source) return
+  const txt = document.createElement('span')
+  txt.textContent = `근거: ${q.source}`
+  el.appendChild(txt)
+  for (const l of q.sourceLinks || []) {
+    const a = document.createElement('a')
+    a.className = 'source-link'
+    a.href = l.url
+    a.target = '_blank'
+    a.rel = 'noopener'
+    a.textContent = l.label
+    el.appendChild(a)
+  }
 }
 
 function escapeHtml(s) {
@@ -209,11 +244,71 @@ function grade(confidence) {
     `${correctOpt.text} — ${correctOpt.why || ''}`
 
   $('#explanation').textContent = q.explanation || ''
-  $('#source').textContent = q.source ? `근거: ${q.source}` : ''
+  renderSource(q)
 
   $('#btn-next').textContent = state.idx === state.queue.length - 1 ? '결과 보기' : '다음'
   $('#feedback').classList.remove('hidden')
   $('#feedback').scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+/* ── 문항 복사 ─────────────────────────────────────── */
+
+// 채점이 끝난 문항을 마크다운으로 옮긴다. 붙여넣는 곳은 대개 대화형 모델이라,
+// 보기·정답·오답 해설을 모두 담고 마지막에 무엇을 물어볼지까지 적어 둔다 —
+// 문항만 붙여넣으면 "정답이 뭐야"를 다시 묻게 되고 그건 이미 아는 것이다.
+function questionMarkdown(q, picked) {
+  const opts = q._shuffled || q.options
+  const lines = []
+  lines.push(`## ${TOPIC_LABEL[q.topic] || q.topic} — ${q.question}`, '')
+  opts.forEach((o, i) => {
+    const mark = o.correct ? ' ✅' : (o === picked ? ' ← 내가 고른 답' : '')
+    lines.push(`${'ABCD'[i]}. ${o.text}${mark}`)
+  })
+  lines.push('')
+
+  const right = opts.find((o) => o.correct)
+  lines.push(`**정답**: ${'ABCD'[opts.indexOf(right)]}. ${right.text}`)
+  if (right.why) lines.push(`> ${right.why}`)
+  if (q.explanation) lines.push('', q.explanation)
+
+  const wrong = opts.filter((o) => !o.correct && o.why)
+  if (wrong.length) {
+    lines.push('', '**오답이 오답인 이유**')
+    for (const o of wrong) lines.push(`- ${'ABCD'[opts.indexOf(o)]}. ${o.text} — ${o.why}`)
+  }
+  if (q.source) lines.push('', `근거: ${q.source}`)
+  // 링크는 마크다운으로 — 붙여넣은 쪽에서 그대로 눌러 원문까지 갈 수 있어야 한다
+  for (const l of q.sourceLinks || []) lines.push(`- [${l.label}](${l.url})`)
+
+  lines.push(
+    '',
+    '---',
+    '',
+    picked && !picked.correct
+      ? '위 문항에서 제가 고른 답이 왜 틀렸는지, 제가 어떤 전제를 잘못 잡고 있었을지 짚어 주세요. 그리고 같은 오해가 실무에서 어떤 사고로 이어지는지 사례를 들어 설명해 주세요.'
+      : '위 문항의 개념을 실무 맥락에서 더 깊이 설명해 주세요. 제가 놓쳤을 인접 개념과, 이걸 안다고 착각하기 쉬운 지점도 함께 짚어 주세요.',
+    '',
+    `출처: cachehit — ${SITE_URL}`,
+  )
+  return lines.join('\n')
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // clipboard API 는 보안 컨텍스트에서만 동작한다. file:// 로 열었을 때의 폴백.
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0'
+    document.body.appendChild(ta)
+    ta.select()
+    let ok = false
+    try { ok = document.execCommand('copy') } catch { ok = false }
+    ta.remove()
+    return ok
+  }
 }
 
 function next() {
@@ -412,6 +507,18 @@ function saveCard() {
 $$('.btn-conf').forEach((b) =>
   b.addEventListener('click', () => grade(b.dataset.conf)))
 $('#btn-next').addEventListener('click', next)
+$('#btn-copy-q').addEventListener('click', async (e) => {
+  const q = state.queue[state.idx]
+  if (!q) return
+  // currentTarget 은 await 이후 null 이 된다(이벤트 객체가 디스패치 후 초기화된다).
+  const b = e.currentTarget
+  const picked = q._shuffled?.[state.pending]
+  const ok = await copyText(questionMarkdown(q, picked))
+  b.textContent = ok ? '복사했습니다' : '복사 실패'
+  b.dataset.done = ok ? '1' : ''
+  clearTimeout(b._t)
+  b._t = setTimeout(() => { b.textContent = '문항 복사'; b.dataset.done = '' }, 1800)
+})
 $('#btn-share').addEventListener('click', saveCard)
 $('#btn-restart').addEventListener('click', () => {
   state.isRetry = false
