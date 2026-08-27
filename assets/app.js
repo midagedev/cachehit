@@ -10,7 +10,7 @@ const LENGTHS = [10, 20]
 const DEFAULT_LENGTH = 10
 const STORE_KEY = 'cachehit.best.v1'
 const LEN_KEY = 'cachehit.len.v1'
-const SITE_URL = 'https://midagedev.github.io/cachehit'
+const SITE_URL = 'https://cachehit.pages.dev'
 
 const TOPIC_LABEL = {
   cdn: 'CDN',
@@ -30,6 +30,29 @@ const GRADES = [
 
 const $ = (s) => document.querySelector(s)
 const $$ = (s) => Array.from(document.querySelectorAll(s))
+
+/* ── 익명 집계 ─────────────────────────────────────── */
+// 무엇을 어떻게 세는지는 functions/collect.js 와 README 에 공개돼 있고, 저장되는 것은
+// 카운터 증가뿐이다(식별자 없음). 수집은 배포 호스트에서만 한다 — 로컬 실행과
+// E2E(cachehit.test)는 이 게이트에서 걸러진다.
+const ANALYTICS_HOSTS = ['cachehit.pages.dev', 'cachehit.midagedev.com']
+function track(t, extra) {
+  try {
+    if (!ANALYTICS_HOSTS.includes(location.hostname)) return
+    const body = JSON.stringify({ t, ...extra })
+    // sendBeacon: 페이지 이탈 중에도 유실되지 않는 전송 경로. 거부되면 keepalive fetch 로.
+    if (!navigator.sendBeacon('/collect', new Blob([body], { type: 'application/json' })))
+      fetch('/collect', { method: 'POST', body, keepalive: true }).catch(() => {})
+  } catch { /* 집계는 실패해도 퀴즈를 막지 않는다 */ }
+}
+function trackPageview() {
+  try {
+    const day = new Date().toISOString().slice(0, 10)
+    if (localStorage.getItem('cachehit.pv.v1') === day) return // 브라우저당 하루 한 번
+    localStorage.setItem('cachehit.pv.v1', day)
+  } catch { /* 저장이 막힌 브라우저에서는 방문마다 집계된다 — 근사치의 한계로 받아들인다 */ }
+  track('pageview')
+}
 
 const state = {
   pool: [],       // 전체 문항
@@ -89,6 +112,8 @@ async function load() {
   }
 
   $('#btn-start').addEventListener('click', () => startRound(pickQuestions(state.length)))
+
+  trackPageview()
 }
 
 /* 라운드 길이. 20문항은 길다는 실사용 피드백이 있어 10을 기본으로 둔다 —
@@ -202,6 +227,8 @@ function grade(confidence) {
   const isCorrect = picked.correct === true
 
   state.answers.push({ q, picked, correct: isCorrect, confidence })
+  // opt 는 셔플 전 원본 인덱스로 보낸다 — 집계는 원본 데이터의 보기 순서 기준이다.
+  track('answer', { qid: q.id, opt: q.options.indexOf(picked), confidence, correct: isCorrect })
 
   $$('#q-options .opt').forEach((b, j) => {
     b.disabled = true
@@ -419,6 +446,7 @@ function renderResult() {
     `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(SITE_URL)}`
 
   state._last = { rate, grade: g, hits, total, byTopic, lucky, solidRate }
+  track('finish', { len: total })
   show('#screen-result')
 }
 
@@ -514,12 +542,14 @@ $('#btn-copy-q').addEventListener('click', async (e) => {
   const b = e.currentTarget
   const picked = q._shuffled?.[state.pending]
   const ok = await copyText(questionMarkdown(q, picked))
+  if (ok) track('copy')
   b.textContent = ok ? '복사했습니다' : '복사 실패'
   b.dataset.done = ok ? '1' : ''
   clearTimeout(b._t)
   b._t = setTimeout(() => { b.textContent = '문항 복사'; b.dataset.done = '' }, 1800)
 })
-$('#btn-share').addEventListener('click', saveCard)
+$('#btn-share').addEventListener('click', () => { track('share'); saveCard() })
+$('#btn-tweet').addEventListener('click', () => track('share'))
 $('#btn-restart').addEventListener('click', () => {
   state.isRetry = false
   show('#screen-intro')
@@ -527,6 +557,7 @@ $('#btn-restart').addEventListener('click', () => {
 $('#btn-retry-wrong').addEventListener('click', () => {
   const weak = weakAnswers().map((a) => a.q)
   if (!weak.length) return
+  track('retry')
   state.isRetry = true
   startRound(shuffle(weak))
 })
