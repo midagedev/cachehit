@@ -270,7 +270,12 @@ a { color: var(--accent); }
 .tbar { display: grid; grid-template-columns: 86px 1fr 52px; gap: 12px; align-items: center; font-size: .87rem; }
 .tbar-name { color: var(--fg-dim); }
 .tbar-track { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
-.tbar-fill { height: 100%; background: var(--accent); border-radius: 99px; }
+/* display: block 이 이 바를 보이게 하는 유일한 줄이다. 둘 다 span 인데 .tbar-track 은
+   그리드 항목이라 자동으로 블록화되고(그래서 트랙은 보였다), .tbar-fill 은 그 자식이라
+   인라인으로 남아 width·height 가 통째로 무시됐다 — 내용이 없으니 폭 0, 즉 안 보인다.
+   "CSS 는 유효하고 요소는 DOM 에 있는데 화면에 없다" 부류라 게이트가 못 잡았다.
+   tools/e2e.mjs 가 이제 실측 폭을 단언한다. */
+.tbar-fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 .tbar-val { text-align: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 
 .hyper {

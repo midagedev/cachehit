@@ -139,6 +139,16 @@ const got = {
   guessCount: (await page.$$('#guess-list li')).length,
   hyperCount: (await page.$$('#hyper-list li')).length,
   tweet: decodeURIComponent((await page.getAttribute('#btn-tweet', 'href')).split('text=')[1].split('&')[0]),
+  // 영역별 바가 실제로 화면을 차지하는지. 정답이 있는 주제의 채움 폭이 0 이면
+  // 바는 DOM 에 있고 CSS 도 유효한데 보이지 않는 상태다(인라인 요소는 width 를
+  // 무시한다). 값·클래스만 확인하는 단언으로는 이 부류가 통째로 빠져나간다.
+  bars: await page.$$eval('#topic-bars .tbar', (rows) => rows.map((r) => ({
+    label: r.querySelector('.tbar-name')?.textContent?.trim(),
+    val: r.querySelector('.tbar-val')?.textContent?.trim(),
+    trackPx: Math.round(r.querySelector('.tbar-track')?.getBoundingClientRect().width || 0),
+    fillPx: Math.round(r.querySelector('.tbar-fill')?.getBoundingClientRect().width || 0),
+    fillH: Math.round(r.querySelector('.tbar-fill')?.getBoundingClientRect().height || 0),
+  }))),
 }
 
 const fails = []
@@ -157,9 +167,24 @@ if (!got.retry.includes(String(weak))) fails.push(`재도전 대상 수 ${weak} 
 // 빌드가 sourceLinks 를 붙이지 않았거나 렌더가 끊긴 것이다.
 if (tally.withLinks < ROUNDS - 3) fails.push(`원문 링크가 보인 문항 ${tally.withLinks}/${ROUNDS} — 너무 적다`)
 
+// 영역별 바 — 폭·높이를 실측한다. 0/N 인 주제는 채움이 0 이어야 정상이므로 제외한다.
+if (!got.bars.length) fails.push('영역별 바가 하나도 렌더되지 않았다')
+for (const b of got.bars) {
+  const [ok] = (b.val || '0/0').split('/').map(Number)
+  if (b.trackPx < 20) fails.push(`영역별 바 트랙에 폭이 없다: ${b.label} ${b.trackPx}px`)
+  if (b.fillH < 4) fails.push(`영역별 바 채움에 높이가 없다: ${b.label} ${b.fillH}px`)
+  if (ok > 0 && b.fillPx < 2) fails.push(`영역별 바 채움이 보이지 않는다: ${b.label} ${b.val} 인데 ${b.fillPx}px`)
+}
+
 // 결과 카드 PNG 가 그려지는지 (canvas 렌더는 예외가 나도 조용해서 여기서만 잡힌다)
 await page.click('#btn-share')
 await page.waitForTimeout(500)
+
+// 눈으로 볼 필요가 있을 때만 — 게이트는 위의 실측으로 판정하고, 이건 사람이 보는 용도다.
+if (process.env.E2E_SHOT) {
+  await page.screenshot({ path: process.env.E2E_SHOT, fullPage: true })
+  console.log(`결과 화면 캡처 → ${process.env.E2E_SHOT}`)
+}
 
 await browser.close()
 
