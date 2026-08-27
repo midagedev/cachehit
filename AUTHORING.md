@@ -10,12 +10,12 @@
 
 | 결정 | 근거 |
 |---|---|
-| 객관식 4지선다 | 단답형과 비교해도 최종 파지의 차이는 작다(Smith & Karpicke, 4개 실험 종합 d=0.07). 형식보다 **인출 성공률**이 중요하고, 웹에서는 채점 가능성과 이탈률이 형식을 결정한다 |
-| 보기 4개 (오답 3개) | 기능하는 오답이 2~3개일 때 문항 난이도와 변별력이 가장 좋다. 5지선다는 이득 없이 저작 비용만 올린다 |
-| 오답은 실제 오개념에서 | 정답과 의미적으로 경쟁하는 오답(competitive distractor)이라야 깊은 처리가 일어난다. 무작위 오답은 재인 훈련에 그친다 |
-| 확신도 입력 | 확신했는데 틀린 오류가 가장 강하게 교정된다(hypercorrection). 기제가 *놀람*이므로 즉시 피드백이 있어야 작동한다 |
-| 즉시 해설 + 오답별 해설 | 교정 피드백은 오류 직후에 줄 때 가장 효과가 크다 |
-| 오답 재도전 라운드 | 피드백 직후 한 번 더 테스트하지 않으면 교정된 오류가 시간이 지나 되돌아온다 |
+| 객관식 4지선다 | 단답형과 비교해도 최종 파지의 차이는 작다(Smith & Karpicke, 4개 실험 종합 d=0.07 [1]). 형식보다 **인출 성공률**이 중요하고, 웹에서는 채점 가능성과 이탈률이 형식을 결정한다 |
+| 보기 4개 (오답 3개) | 기능하는 오답이 2~3개일 때 문항 난이도와 변별력이 가장 좋다. 5지선다는 이득 없이 저작 비용만 올린다 [2] |
+| 오답은 실제 오개념에서 | 정답과 의미적으로 경쟁하는 오답(competitive distractor)이라야 깊은 처리가 일어난다. 무작위 오답은 재인 훈련에 그친다 [3] |
+| 확신도 입력 | 확신했는데 틀린 오류가 가장 강하게 교정된다(hypercorrection). 기제가 *놀람*이므로 즉시 피드백이 있어야 작동한다 [4][5] |
+| 즉시 해설 + 오답별 해설 | 객관식은 오답 보기에 노출시키는 대가로 오개념을 심을 수 있는데, 정답 확인 피드백이 그 부작용을 없애면서 파지 이득은 키운다 [6]. 세션이 끝나면 재접촉이 없는 웹 퀴즈에서는 해설을 줄 수 있는 시점이 즉시뿐이다 |
+| 오답 재도전 라운드 | 교정에 성공한 오류도 일주일 뒤에는 되돌아오고, 확신이 높았던 오답일수록 더 잘 되돌아온다 [7]. 그래서 같은 세션 안에서 한 번 더 인출시킨다 |
 
 ---
 
@@ -105,7 +105,7 @@
 
 ## 3. 금지 사항: 시험 요령으로 풀리게 만드는 것들
 
-1~8번은 `tools/validate.mjs`가 기계적으로 검사한다. 9~11번은 블라인드 감사(§6.2)에서
+1~8번은 문항 저작 가이드라인 연구가 80년치 문헌에서 정리한 규칙과 겹치고 [8], `tools/validate.mjs`가 기계적으로 검사한다. 9~11번은 블라인드 감사(§6.2)에서
 실측으로 드러난 것이고, **9·10번은 기계로 검사되지 않는다.** 검사를 구현해서 측정해 봤지만
 지목군과 대조군의 분포가 분리되지 않았다(실측 기록은 `tools/validate.mjs` 상단 주석).
 11번은 절반만 검사된다(전제를 부정하는 오답은 검출되지만, 오답이 결함을 서술하는지는 검출되지 않는다).
@@ -252,3 +252,20 @@
 4. PR에 **각 오답이 어느 오개념에서 왔는지** 한 줄씩 적는다.
 
 오답의 출처를 설명하지 못하는 PR은 병합하지 않는다.
+
+---
+
+## 9. 근거 문헌
+
+§0 표와 §3의 근거다. 이 문서의 다른 인용과 같은 기준을 적용한다: 문서가 주장을 실제로
+뒷받침하는 것만 싣고, 전해 들은 요약은 싣지 않는다. 링크는 DOI 를 쓴다. 일부 출판사는
+자동화 요청에 403 을 주지만(check-links 의 봇 차단 규칙과 같은 부류), 브라우저에서는 열린다.
+
+1. Smith, M. A., & Karpicke, J. D. (2014). Retrieval practice with short-answer, multiple-choice, and hybrid tests. *Memory*, 22(7), 784–802. <https://doi.org/10.1080/09658211.2013.831454>
+2. Rodriguez, M. C. (2005). Three options are optimal for multiple-choice items: A meta-analysis of 80 years of research. *Educational Measurement: Issues and Practice*, 24(2), 3–13. <https://doi.org/10.1111/j.1745-3992.2005.00006.x>
+3. Little, J. L., Bjork, E. L., Bjork, R. A., & Angello, G. (2012). Multiple-choice tests exonerated, at least of some charges: Fostering test-induced learning and avoiding test-induced forgetting. *Psychological Science*, 23(11). <https://doi.org/10.1177/0956797612443370>
+4. Butterfield, B., & Metcalfe, J. (2001). Errors committed with high confidence are hypercorrected. *Journal of Experimental Psychology: Learning, Memory, and Cognition*, 27(6), 1491–1494. <https://doi.org/10.1037/0278-7393.27.6.1491>
+5. Metcalfe, J. (2017). Learning from errors. *Annual Review of Psychology*, 68. <https://doi.org/10.1146/annurev-psych-010416-044022>
+6. Butler, A. C., & Roediger, H. L. (2008). Feedback enhances the positive effects and reduces the negative effects of multiple-choice testing. *Memory & Cognition*, 36(3), 604–616. <https://doi.org/10.3758/MC.36.3.604>
+7. Butler, A. C., Fazio, L. K., & Marsh, E. J. (2011). The hypercorrection effect persists over a week, but high-confidence errors return. *Psychonomic Bulletin & Review*, 18(6). <https://doi.org/10.3758/s13423-011-0173-y>
+8. Haladyna, T. M., Downing, S. M., & Rodriguez, M. C. (2002). A review of multiple-choice item-writing guidelines for classroom assessment. *Applied Measurement in Education*, 15(3). <https://doi.org/10.1207/S15324818AME1503_5>
