@@ -267,6 +267,34 @@ if (only) questions = questions.filter((q) => q.topic === only)
 for (const q of questions) checkQuestion(q)
 const stats = checkGlobal(questions)
 
+// OG 카드가 데이터와 어긋났는지. 카드에는 "N문항"이 새겨져 있고, 그 N을 PNG 의 tEXt
+// 청크에도 넣어 둔다(tools/make-og.py). 이 카드는 macOS 시스템 폰트로 그려지므로 CI 는
+// 재생성해 대조할 수 없다 — 그래서 재생성이 아니라 스탬프 대조가 유일한 검출 경로다.
+// 실측: 89문항 시절 카드가 문항이 149로 늘어난 뒤에도 그대로 배포돼 있었고, 소셜 카드는
+// 화면 어디에도 나오지 않아 아무 게이트에도 걸리지 않았다.
+function checkOgStamp(total) {
+  const p = join(ROOT, 'assets', 'og.png')
+  if (!existsSync(p)) return warn('og.png', 'OG 카드가 없다 — twitter:card 가 렌더되지 않는다')
+  const buf = readFileSync(p)
+  let stamped = null
+  for (let i = 8; i + 8 <= buf.length; ) {
+    const len = buf.readUInt32BE(i)
+    const type = buf.toString('ascii', i + 4, i + 8)
+    if (type === 'tEXt') {
+      const [k, v] = buf.toString('latin1', i + 8, i + 8 + len).split('\0')
+      if (k === 'cachehit:questions') stamped = Number(v)
+    }
+    if (type === 'IEND') break
+    i += 12 + len
+  }
+  if (stamped === null)
+    return warn('og.png', '문항 수 스탬프가 없다 — python3 tools/make-og.py 로 다시 만들어라')
+  if (stamped !== total)
+    err('og.png', `OG 카드는 ${stamped}문항으로 그려졌는데 지금은 ${total}문항이다 — python3 tools/make-og.py`)
+}
+// --only/--topic 로 일부만 검사할 때는 총계가 아니므로 대조하지 않는다
+if (!only && !process.argv.includes('--topic')) checkOgStamp(stats.total)
+
 const byTopic = {}
 const byDiff = { 1: 0, 2: 0, 3: 0 }
 const byType = {}

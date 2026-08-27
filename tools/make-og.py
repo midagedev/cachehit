@@ -9,6 +9,7 @@ twitter:card 를 summary_large_image 로 선언했으므로 이 이미지가 없
 import json
 import pathlib
 from PIL import Image, ImageDraw, ImageFont
+from PIL.PngImagePlugin import PngInfo
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FONT = '/System/Library/Fonts/AppleSDGothicNeo.ttc'
@@ -103,5 +104,11 @@ rw = d.textlength(right, font=font(25, 'SemiBold'))
 d.text((W - PAD - rw, BAR_Y + 30), right, font=font(25, 'SemiBold'), fill=OK)
 
 out = ROOT / 'assets' / 'og.png'
-img.save(out, 'PNG', optimize=True)
-print(f'{out} — {W}×{H}, {out.stat().st_size // 1024}KB, 문항 {n}건')
+# 문항 수를 PNG 안에 새긴다. 이 카드는 macOS 시스템 폰트에 의존해 CI 에서 재생성할 수
+# 없으므로, 데이터와 어긋났는지는 재생성 대조가 아니라 이 값으로만 검출된다
+# (tools/validate.mjs 가 읽어 현재 문항 수와 비교한다). 89문항 시절 카드가 149문항이
+# 된 뒤에도 그대로 배포돼 있던 것이 이 스탬프를 만든 이유다.
+meta = PngInfo()
+meta.add_text('cachehit:questions', str(n))
+img.save(out, 'PNG', optimize=True, pnginfo=meta)
+print(f'{out} — {W}×{H}, {out.stat().st_size // 1024}KB, 문항 {n}건 (PNG 에 새김)')
