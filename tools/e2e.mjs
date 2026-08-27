@@ -5,6 +5,9 @@
 // `validate.mjs` 는 문항 데이터만 보고 앱 로직은 보지 않는다.
 //
 // 실행:  npx playwright install chromium   (한 번)
+//        이 레포는 package.json 이 없다(순수 node + 정적 사이트). 로컬에서는 playwright 가
+//        있는 다른 레포를 붙이는 것으로 충분하다 — `ln -s <다른레포>/node_modules node_modules`
+//        (.gitignore 에 있으므로 커밋되지 않는다). CI 는 워크플로에서 직접 설치한다.
 //        node tools/e2e.mjs
 //
 // 로컬 HTTP 서버를 띄우지 않고 playwright 라우팅으로 파일을 서빙한다 — 리스닝 소켓이

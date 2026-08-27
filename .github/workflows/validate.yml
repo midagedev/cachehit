@@ -15,6 +15,10 @@ jobs:
           node-version: '20'
       - name: 문항 품질 게이트
         run: node tools/validate.mjs
+      # 링크 검사(links.yml)와 달리 이쪽은 배포를 막아도 된다. 발행된 RFC 의 절 번호는
+      # 바뀌지 않으므로 여기서의 실패는 링크가 죽은 것이 아니라 우리 인용이 틀린 것이다.
+      - name: RFC 절 인용 대조
+        run: node tools/check-rfc-sections.mjs
       - name: 빌드 산출물이 최신인지 확인
         run: |
           node tools/build.mjs
