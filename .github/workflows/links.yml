@@ -1,0 +1,20 @@
+name: links
+
+# 링크는 시간이 지나면 썩는다. 푸시마다 확인하면 외부 사이트의 일시 장애로 배포가
+# 막히므로, 주 1회와 수동 실행으로만 돈다. 실패는 "고칠 것이 생겼다"는 알림이지
+# 배포를 막는 게이트가 아니다.
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 근거 링크 실존 확인
+        run: node tools/check-links.mjs

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // 문항 품질 게이트. AUTHORING.md §1 불변식과 §3 금지 사항을 기계적으로 검사한다.
-// 사용: node tools/validate.mjs [--json] [--only <topic>]
-//   --only <topic>  해당 topic 문항만 검사한다. 병렬 저작 시 자기 트랙만 보기 위한 것.
+// 사용: node tools/validate.mjs [--json] [--topic <name>] [--defect-stems]
+//   --topic <name>   해당 주제 파일만 검사한다. 병렬 저작 시 자기 트랙만 보기 위한 것.
+//   --defect-stems   결함을 묻는 발문의 id 목록(§3-11 자기점검 대상)을 함께 출력한다.
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -71,7 +72,19 @@ function loadAll() {
     console.error(`문항 디렉터리가 없습니다: ${QDIR}`)
     process.exit(2)
   }
-  const files = readdirSync(QDIR).filter((f) => f.endsWith('.json'))
+  // --topic <name> 은 그 주제 파일만 검사한다. 여러 사람이 주제별로 나눠 문항을 쓸 때,
+  // 옆 주제의 편집 중간 상태 때문에 자기 게이트가 실패하는 것을 막는다.
+  // 병합 전 최종 확인은 항상 주제 한정 없이 전체로 돌린다.
+  const ti = process.argv.indexOf('--topic')
+  const only = ti >= 0 ? process.argv[ti + 1] : null
+  let files = readdirSync(QDIR).filter((f) => f.endsWith('.json'))
+  if (only) {
+    files = files.filter((f) => f === `${only}.json`)
+    if (!files.length) {
+      console.error(`그런 주제 파일이 없습니다: ${only}.json`)
+      process.exit(2)
+    }
+  }
   const out = []
   for (const f of files) {
     const path = join(QDIR, f)

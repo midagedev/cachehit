@@ -1,0 +1,327 @@
+{
+  "_comment": [
+    "문항의 source 텍스트를 원문 링크로 잇는 레지스트리.",
+    "",
+    "match 는 source 텍스트에 그대로 들어 있는 문자열이다(대소문자 무시). 하나의 source 가",
+    "여러 항목에 걸리면 링크가 여러 개 붙는다 — 그게 맞다. source 는 대개 문서 두셋을 나열한다.",
+    "",
+    "RFC 는 여기 적지 않는다. tools/build.mjs 가 'RFC 9111 §5.2.2' 같은 표기에서 번호와 절을",
+    "직접 읽어 rfc-editor 앵커를 만든다. 새 RFC 를 인용해도 레지스트리를 고칠 필요가 없다.",
+    "",
+    "여기 적는 URL 은 전부 실제로 열어 확인한 것이다. node tools/check-links.mjs 가",
+    "다시 확인한다. 없는 문서를 지어내면 문항 전체의 신뢰가 무너지므로, 확신이 없으면",
+    "항목을 넣지 말고 그 문항은 링크 없이 텍스트 근거만 두는 편이 낫다."
+  ],
+  "entries": [
+    {
+      "match": "당근 2025 GCP 밋업",
+      "label": "당근 2025 GCP 밋업 — 대규모 이미지 서비스 with Cloud CDN, Cloud Run, Cloud Storage",
+      "url": "https://www.youtube.com/watch?v=aFauN9cs8_I"
+    },
+    {
+      "match": "당근 GCP 밋업",
+      "label": "당근 2025 GCP 밋업 — 대규모 이미지 서비스",
+      "url": "https://www.youtube.com/watch?v=aFauN9cs8_I"
+    },
+    {
+      "match": "Lambda@Edge에서 실시간 이미지 리사이즈",
+      "label": "당근 테크블로그 — Lambda@Edge 실시간 이미지 리사이즈 & WebP 변환",
+      "url": "https://medium.com/daangn/lambda-edge%EB%A1%9C-%EA%B5%AC%ED%98%84%ED%95%98%EB%8A%94-on-the-fly-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EB%A6%AC%EC%82%AC%EC%9D%B4%EC%A7%95-f4e5052d49f3"
+    },
+    {
+      "match": "Lambda@Edge 실시간 이미지 리사이즈",
+      "label": "당근 테크블로그 — Lambda@Edge 실시간 이미지 리사이즈 & WebP 변환",
+      "url": "https://medium.com/daangn/lambda-edge%EB%A1%9C-%EA%B5%AC%ED%98%84%ED%95%98%EB%8A%94-on-the-fly-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EB%A6%AC%EC%82%AC%EC%9D%B4%EC%A7%95-f4e5052d49f3"
+    },
+    {
+      "match": "이미지 썸네일 생성 개발 후기",
+      "label": "당근 테크블로그 — AWS Lambda를 이용한 이미지 썸네일 생성 개발 후기",
+      "url": "https://medium.com/daangn/aws-lambda%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EC%8D%B8%EB%84%A4%EC%9D%BC-%EC%83%9D%EC%84%B1-%EA%B0%9C%EB%B0%9C-%ED%9B%84%EA%B8%B0-acc278d49980"
+    },
+    {
+      "match": "multipart upload",
+      "label": "AWS S3 — Uploading and copying objects using multipart upload",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html"
+    },
+    {
+      "match": "Abort incomplete multipart",
+      "label": "AWS S3 — 미완료 멀티파트 업로드 정리",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu.html"
+    },
+    {
+      "match": "Browser-based uploads using POST",
+      "label": "AWS S3 — Browser-based uploads using POST",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/HTTPPOSTForm.html"
+    },
+    {
+      "match": "Blocking public access",
+      "label": "AWS S3 — Blocking public access",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+    },
+    {
+      "match": "SSE-KMS",
+      "label": "AWS S3 — SSE-KMS 로 데이터 보호",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html"
+    },
+    {
+      "match": "presigned URL",
+      "label": "AWS S3 — presigned URL 로 객체 공유",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html"
+    },
+    {
+      "match": "Share an object with a presigned URL",
+      "label": "AWS S3 — presigned URL 로 객체 공유",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html"
+    },
+    {
+      "match": "Checking object integrity",
+      "label": "AWS S3 — Checking object integrity",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html"
+    },
+    {
+      "match": "Object metadata",
+      "label": "AWS S3 — Working with object metadata",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html"
+    },
+    {
+      "match": "Event notifications",
+      "label": "AWS S3 — Event notifications",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html"
+    },
+    {
+      "match": "Lifecycle configuration",
+      "label": "AWS S3 — Lifecycle configuration",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-configuration-examples.html"
+    },
+    {
+      "match": "Storage classes",
+      "label": "AWS S3 — 스토리지 클래스",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html"
+    },
+    {
+      "match": "strong consistency",
+      "label": "AWS S3 — 강한 읽기 일관성",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel"
+    },
+    {
+      "match": "CopyObject",
+      "label": "AWS S3 API — CopyObject",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html"
+    },
+    {
+      "match": "Restricting access to an Amazon S3 origin",
+      "label": "AWS CloudFront — S3 오리진 접근 제한(OAC/OAI)",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html"
+    },
+    {
+      "match": "캐시 정책",
+      "label": "AWS CloudFront — 캐시 키와 캐시 정책",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/controlling-the-cache-key.html"
+    },
+    {
+      "match": "Origin Shield",
+      "label": "AWS CloudFront — Origin Shield",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/origin-shield.html"
+    },
+    {
+      "match": "CloudFront Developer Guide",
+      "label": "AWS CloudFront Developer Guide",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html"
+    },
+    {
+      "match": "SQS",
+      "label": "AWS SQS — 표준 큐의 at-least-once 전달",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html"
+    },
+    {
+      "match": "Route 53",
+      "label": "AWS Route 53 — DNS 페일오버",
+      "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html"
+    },
+    {
+      "match": "Cloud CDN 가격",
+      "label": "Google Cloud CDN — 가격",
+      "url": "https://cloud.google.com/cdn/pricing"
+    },
+    {
+      "match": "Google Cloud CDN",
+      "label": "Google Cloud CDN — 캐싱 개요",
+      "url": "https://cloud.google.com/cdn/docs/caching"
+    },
+    {
+      "match": "Cloud CDN",
+      "label": "Google Cloud CDN — 캐싱 개요",
+      "url": "https://cloud.google.com/cdn/docs/caching"
+    },
+    {
+      "match": "서명 URL",
+      "label": "Google Cloud CDN — 서명된 URL",
+      "url": "https://cloud.google.com/cdn/docs/using-signed-urls"
+    },
+    {
+      "match": "Resumable upload",
+      "label": "Google Cloud Storage — Resumable upload",
+      "url": "https://cloud.google.com/storage/docs/resumable-uploads"
+    },
+    {
+      "match": "Autoclass",
+      "label": "Google Cloud Storage — Autoclass",
+      "url": "https://cloud.google.com/storage/docs/autoclass"
+    },
+    {
+      "match": "Storage classes and pricing",
+      "label": "Google Cloud Storage — 스토리지 클래스",
+      "url": "https://cloud.google.com/storage/docs/storage-classes"
+    },
+    {
+      "match": "Cloud Run",
+      "label": "Google Cloud Run 문서",
+      "url": "https://cloud.google.com/run/docs"
+    },
+    {
+      "match": "Pub/Sub",
+      "label": "Google Cloud Pub/Sub — 구독과 전달 보장",
+      "url": "https://cloud.google.com/pubsub/docs/subscription-overview"
+    },
+    {
+      "match": "Synthetic Monitoring",
+      "label": "Google Cloud Monitoring — 가동 시간 확인",
+      "url": "https://cloud.google.com/monitoring/uptime-checks"
+    },
+    {
+      "match": "HLS muxer",
+      "label": "FFmpeg — HLS muxer 문서",
+      "url": "https://ffmpeg.org/ffmpeg-formats.html#hls-2"
+    },
+    {
+      "match": "movflags",
+      "label": "FFmpeg — MOV/MP4 muxer(movflags, +faststart)",
+      "url": "https://ffmpeg.org/ffmpeg-formats.html#mov_002c-mp4_002c-ismv"
+    },
+    {
+      "match": "concat demuxer",
+      "label": "FFmpeg — concat demuxer",
+      "url": "https://ffmpeg.org/ffmpeg-formats.html#concat-1"
+    },
+    {
+      "match": "FFprobe",
+      "label": "FFmpeg — ffprobe 문서",
+      "url": "https://ffmpeg.org/ffprobe.html"
+    },
+    {
+      "match": "FFmpeg 공식 위키 Encode",
+      "label": "FFmpeg 위키 — H.264 인코딩 가이드",
+      "url": "https://trac.ffmpeg.org/wiki/Encode/H.264"
+    },
+    {
+      "match": "FFmpeg 공식 문서",
+      "label": "FFmpeg 전체 문서",
+      "url": "https://ffmpeg.org/ffmpeg-all.html"
+    },
+    {
+      "match": "VMAF",
+      "label": "Netflix VMAF — 저장소와 문서",
+      "url": "https://github.com/Netflix/vmaf"
+    },
+    {
+      "match": "Per-Title Encode Optimization",
+      "label": "Netflix Tech Blog — Per-Title Encode Optimization",
+      "url": "https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2"
+    },
+    {
+      "match": "Streaming AV1",
+      "label": "Netflix Tech Blog — Bringing AV1 Streaming to Netflix Members' TVs",
+      "url": "https://netflixtechblog.com/bringing-av1-streaming-to-netflix-members-tvs-b7fc88e42320"
+    },
+    {
+      "match": "ITU-T H.264",
+      "label": "ITU-T H.264 권고안",
+      "url": "https://www.itu.int/rec/T-REC-H.264"
+    },
+    {
+      "match": "WebM Project",
+      "label": "The WebM Project",
+      "url": "https://www.webmproject.org/"
+    },
+    {
+      "match": "cwebp",
+      "label": "Google — cwebp 인코더 문서",
+      "url": "https://developers.google.com/speed/webp/docs/cwebp"
+    },
+    {
+      "match": "libavif",
+      "label": "libavif — AVIF 인코더/디코더",
+      "url": "https://github.com/AOMediaCodec/libavif"
+    },
+    {
+      "match": "Guetzli",
+      "label": "Google Research — Guetzli JPEG 인코더",
+      "url": "https://github.com/google/guetzli"
+    },
+    {
+      "match": "libjpeg",
+      "label": "Independent JPEG Group",
+      "url": "https://www.ijg.org/"
+    },
+    {
+      "match": "GIF89a",
+      "label": "GIF89a 사양(W3C 보관본)",
+      "url": "https://www.w3.org/Graphics/GIF/spec-gif89a.txt"
+    },
+    {
+      "match": "ICC 사양",
+      "label": "ICC.1:2022 사양",
+      "url": "https://www.color.org/specification/ICC.1-2022-05.pdf"
+    },
+    {
+      "match": "ImageMagick policy.xml",
+      "label": "ImageMagick — 보안 정책(policy.xml)",
+      "url": "https://imagemagick.org/script/security-policy.php"
+    },
+    {
+      "match": "CVE-2023-4863",
+      "label": "NVD — CVE-2023-4863 (libwebp)",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4863"
+    },
+    {
+      "match": "Cloudflare Images",
+      "label": "Cloudflare Images 문서",
+      "url": "https://developers.cloudflare.com/images/"
+    },
+    {
+      "match": "tus",
+      "label": "tus — 재개 가능 업로드 프로토콜",
+      "url": "https://tus.io/protocols/resumable-upload"
+    },
+    {
+      "match": "Pro Git",
+      "label": "Pro Git — Git Internals: Git Objects",
+      "url": "https://git-scm.com/book/en/v2/Git-Internals-Git-Objects"
+    },
+    {
+      "match": "Surrogate-Control",
+      "label": "Fastly — Surrogate-Control 헤더",
+      "url": "https://developer.fastly.com/reference/http/http-headers/Surrogate-Control/"
+    },
+    {
+      "match": "Apache httpd",
+      "label": "Apache httpd — mod_deflate",
+      "url": "https://httpd.apache.org/docs/2.4/mod/mod_deflate.html"
+    },
+    {
+      "match": "당근 테크블로그",
+      "label": "당근 테크블로그 — Lambda@Edge 실시간 이미지 리사이즈 & WebP 변환",
+      "url": "https://medium.com/daangn/lambda-edge%EB%A1%9C-%EA%B5%AC%ED%98%84%ED%95%98%EB%8A%94-on-the-fly-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EB%A6%AC%EC%82%AC%EC%9D%B4%EC%A7%95-f4e5052d49f3"
+    },
+    {
+      "match": "EXIF 사양",
+      "label": "CIPA DC-008 — Exif 사양",
+      "url": "https://www.cipa.jp/std/documents/download_e.html?DC-008-Translation-2019-E"
+    },
+    {
+      "match": "CIPA DC-008",
+      "label": "CIPA DC-008 — Exif 사양",
+      "url": "https://www.cipa.jp/std/documents/download_e.html?DC-008-Translation-2019-E"
+    }
+  ]
+}

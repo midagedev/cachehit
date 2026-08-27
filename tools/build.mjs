@@ -6,6 +6,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
+import { linksFor } from './sources.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const QDIR = join(ROOT, 'data', 'questions')
@@ -37,7 +38,13 @@ const slim = all.map((q) => ({
   })),
   explanation: q.explanation,
   source: q.source,
+  // 원문 링크. source 텍스트에서 data/sources.json 과 RFC 표기로 유도한다.
+  // 붙는 링크가 없으면 필드를 만들지 않는다 — 근거가 유료 표준인 경우가 그렇다.
+  ...(linksFor(q.source).length ? { sourceLinks: linksFor(q.source) } : {}),
 }))
+
+const linked = slim.filter((q) => q.sourceLinks).length
+console.log(`원문 링크: ${linked}/${slim.length}문항`)
 
 writeFileSync(OUT, JSON.stringify(slim), 'utf8')
 console.log(`\n빌드 완료: ${slim.length}문항 → data/questions.json`)
