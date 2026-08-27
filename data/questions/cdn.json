@@ -1,0 +1,653 @@
+[
+  {
+    "id": "cdn-miss-benefit-001",
+    "topic": "cdn",
+    "tags": ["latency", "termination-point", "cache-miss"],
+    "difficulty": 1,
+    "question": "인증 결과를 반환하는 API라 캐시가 거의 안 되는 트래픽인데, CDN을 앞에 붙였더니 지연이 줄었다. 히트가 아닌데 줄어든 이유는?",
+    "options": [
+      {
+        "text": "CDN이 오리진 응답을 알아서 압축해서 전송량을 줄여 주기 때문이다",
+        "distractorType": "adjacent",
+        "why": "본문 재압축은 CDN의 기본 동작이 아니다. 캐시 외 이득의 원리를 본문 가공으로 짚은 인접 개념 치이반이다."
+      },
+      {
+        "text": "TCP·TLS 핸드셰이크와 전송 램프업이 유저 가까운 PoP에서 끝나기 때문이다",
+        "correct": true,
+        "why": "캐시와 무관한 종료점 이동 이득이다. 왕복이 짧아지면 혼잡 제어 창도 빨리 자라 소형 객체 전송이 단축된다."
+      },
+      {
+        "text": "TLS 세션 재개로 오리진과 맺은 연결이 재사용되어 왕복이 짧아지기 때문이다",
+        "distractorType": "adjacent",
+        "why": "짧아지는 구간은 유저와 엣지 사이지 CDN과 오리진 사이가 아니다. 이득이 나는 위치를 오리진 쪽으로 옮겨 읽었다."
+      },
+      {
+        "text": "CDN이 오리진 응답을 예측해 미리 받아 두는 프리페치가 작동하기 때문이다",
+        "distractorType": "overgeneralized",
+        "why": "저장이 안 되는 인증 응답은 예측 선반입의 대상도 아니다. 캐시형 이득을 저장 불가 트래픽으로 확장한 과잉 일반화다."
+      }
+    ],
+    "explanation": "CDN의 이득은 두 개다. 캐시 히트(RTT 0 서빙)와 종료점 이동(TCP/TLS 핸드셰이크와 혼잡 제어 램프업이 유저 근처 PoP에서 끝남)이다. 미스가 나면 전자만 사라지고 후자는 그대로 남는다. 그래서 캐시 불가능한 API 트래픽에도 CDN을 붙이는 구성이 성립하고, 오리진 fetch는 CDN 백본에서 벌어져 유저에게는 첫 바이트부터 순차 전달되는 경우가 일반적이다. \"CDN = 캐시\"라는 등식 하나로 두 이득을 통째로 놓치게 된다.",
+    "source": "AWS CloudFront Developer Guide — 동적 콘텐츠 서빙(TLS 종료·연결 최적화), 당근 2025 GCP 밋업 발표"
+  },
+  {
+    "id": "cdn-shield-math-001",
+    "topic": "cdn",
+    "tags": ["origin-shield", "tiered-caching", "miss-rate"],
+    "difficulty": 2,
+    "question": "엣지 캐시 미스율이 10%이고 origin shield 히트율이 80%다. 오리진에 실제로 도달하는 요청 비율은?",
+    "options": [
+      {
+        "text": "20% — 1 − 0.8",
+        "distractorType": "one-step-short",
+        "why": "1 − 0.8 은 실드의 미스율이지 오리진 도달률이 아니다. 엣지 미스율 10% 를 곱하는 단계를 건너뛰었다."
+      },
+      {
+        "text": "8% — 10% × 0.8",
+        "distractorType": "plausible-number",
+        "why": "10% × 0.8 은 실드가 흡수한 몫이다. 흡수량과 관통량을 뒤집어 계산했다."
+      },
+      {
+        "text": "2% — 10% × (1 − 0.8)",
+        "correct": true,
+        "why": "엣지 미스가 실드를 거치고 실드에서 남은 20%만 오리진까지 간다. 계층의 이득은 이렇게 곱으로 쌓인다."
+      },
+      {
+        "text": "10% — 실드 히트율은 오리진 도달률과 무관하다",
+        "distractorType": "inverted",
+        "why": "실드가 있으면 엣지 미스가 오리진으로 직행하지 않는다. 실드 무용론은 키 규칙 불일치로 히트율이 깨진 사례와 혼동한 것이다."
+      }
+    ],
+    "explanation": "origin shield의 정량 효과는 '오리진 도달률 = 엣지 미스율 × (1 − 실드 히트율)' 하나로 계산된다. 실드가 없으면 각 PoP의 콜드 미스가 오리진을 직접 때려 객체당 최대 PoP 수만큼 중복 fetch가 일어나고, 실드가 있으면 곱셈(N배)이 덧셈(1배)으로 바뀐다. 단 이 식의 전제는 엣지와 실드의 캐시 키 정규화 규칙이 같다는 것 — 규칙이 어긋나면 실드 히트율 자체가 깨져 계층 이득이 소멸한다. 실드는 만능 스위치가 아니라 히트율의 함수다.",
+    "source": "AWS CloudFront Developer Guide — Origin Shield(오리진 요청 감소), 당근 2025 GCP 밋업 발표(계층 구조)"
+  },
+  {
+    "id": "cdn-unsigned-url-001",
+    "topic": "cdn",
+    "tags": ["signed-url", "security", "cloud-cdn"],
+    "difficulty": 2,
+    "question": "Cloud CDN에서 서명 키 검증을 켠 상태다. 공격자가 Expires·KeyName·Signature 쿼리 파라미터를 전부 지운 URL로 요청했고, 그 URL은 아직 CDN에 캐시되어 있지 않다. 결과는?",
+    "options": [
+      {
+        "text": "서명이 없다고 판단한 CDN이 검증을 건너뛰고 오리진까지 전달한다",
+        "correct": true,
+        "why": "서명 관련 쿼리 파라미터가 없으면 '서명된 URL이 아니네' 하고 바이패스한다. 응답이 캐시될 수도 있다."
+      },
+      {
+        "text": "Cloud CDN이 서명 파라미터 부재를 확인하고 403 Forbidden으로 거절한다",
+        "distractorType": "vendor-mixup",
+        "why": "서명 검증이 전 요청에 적용되는 다른 벤더의 동작이나 상식적 기대를 Cloud CDN에 이식한 것이다."
+      },
+      {
+        "text": "CDN은 통과시키지만 오리진이 서명 부재를 보고 거절한다",
+        "distractorType": "one-step-short",
+        "why": "오리진에 도달하는 URL은 어차피 서명이 벗겨진 모습이라 정상 요청과 구분되지 않는다. 오리진 검증은 헤더의 원본 URL로 해야 한다."
+      },
+      {
+        "text": "서명이 없으면 공개 콘텐츠 요청으로 간주해 캐시에 있을 때만 응답한다",
+        "distractorType": "adjacent",
+        "why": "검증을 건너뛴다는 점은 맞지만 캐시 유무로 갈리지 않는다. 미스면 그대로 오리진까지 도달하고 그 응답이 캐시된다."
+      }
+    ],
+    "explanation": "GCP Cloud CDN의 서명 검증은 '서명이 있을 때만' 작동한다. 서명 관련 파라미터(Expires·KeyName·Signature)가 아예 없으면 검증 대상이 아니라고 판단해 바이패스하며, 요청은 오리진까지 도달하고 그 응답이 캐시될 수도 있다. 그래서 'CDN 서명 검증 켬 = 보호 완료'가 아니라, 오리진(애플리케이션)의 2차 검증이 벤더 공식 권장이고, 스토리지 직접 접근 차단이 세 번째 층이 된다. 보안 경계는 한 게이트가 아니라 겹겹이 쌓는 구조로 설계해야 한다.",
+    "source": "Google Cloud CDN 공식 문서 — Signed URLs(서명되지 않은 요청은 유효성 검사 생략), 당근 2025 GCP 밋업 발표"
+  },
+  {
+    "id": "cdn-origin-revalidation-001",
+    "topic": "cdn",
+    "tags": ["signed-url", "origin", "validation"],
+    "difficulty": 3,
+    "question": "CDN 레벨에서 만료된 서명 URL을 40x로 차단하도록 설정했다. 그런데도 GCP가 오리진에서의 재검증을 권장하는 이유는?",
+    "options": [
+      {
+        "text": "CDN의 시계와 오리진의 시계가 어긋나 만료 판정이 틀릴 수 있어서",
+        "distractorType": "plausible-number",
+        "why": "시계 오차는 검증 일반의 리스크지만 이 권장의 본체가 아니다. 검증이 아예 생략되는 경로가 존재한다는 것이 핵심이다."
+      },
+      {
+        "text": "서명 키를 CDN과 오리진이 서로 다르게 가져야 해서",
+        "distractorType": "adjacent",
+        "why": "키 분리·로테이션은 설계 화제일 뿐 재검증 권장과는 무관한 인접 주제다."
+      },
+      {
+        "text": "CDN 검증은 캐시 미스일 때만 수행되어 히트 요청이 무검증이라서",
+        "distractorType": "one-step-short",
+        "why": "검증 생략의 트리거는 히트 여부가 아니라 서명 파라미터의 부재다. 생략 조건을 잘못 짚었다."
+      },
+      {
+        "text": "서명 파라미터를 지운 요청은 CDN 검증이 생략되어 오리진까지 관통해서",
+        "correct": true,
+        "why": "CDN 검증은 서명이 있을 때만 작동하는 선택적 게이트다. 무서명 우회를 막는 최종 게이트는 오리진뿐이다."
+      }
+    ],
+    "explanation": "CDN의 만료 차단은 서명 파라미터가 붙어 있는 요청에만 적용된다. 파라미터를 지우고 오면 검증 자체가 생략되어 오리진까지 관통할 수 있고, 그 응답이 캐시되면 만료 정책과 무관하게 계속 서빙될 수 있다. 그래서 만료·서명의 최종 집행자는 오리진이어야 한다는 것이 벤더 공식 권장이며, 당근도 Cloud Run 애플리케이션에서 시그니처를 한 번 더 검증한다. 'CDN 통과 = 검증됨'이 아니라 'CDN 검증은 선택적 게이트'라는 것이 신뢰 경계 설계의 출발점이다.",
+    "source": "Google Cloud CDN 공식 문서 — 서명된 요청은 반드시 원본에서 검증할 것 권장, 당근 2025 GCP 밋업 발표"
+  },
+  {
+    "id": "cdn-x-client-url-001",
+    "topic": "cdn",
+    "tags": ["signed-url", "x-client-request-url", "origin"],
+    "difficulty": 3,
+    "question": "Cloud CDN이 서명 검증에 성공한 요청을 오리진(Cloud Run)으로 보냈더니 URL에서 서명 파라미터가 사라져 있었다. 오리진에서 서명을 검증하려면?",
+    "options": [
+      {
+        "text": "파라미터가 없는 요청은 전부 거절하면 된다",
+        "distractorType": "inverted",
+        "why": "CDN을 정상적으로 통과한 요청도 같은 모습으로 도착하므로 서비스가 전면 중단된다. 무서명 요청과의 구분이 문제의 핵심이다."
+      },
+      {
+        "text": "CDN이 이미 검증했으므로 오리진 검증 자체가 불필요하다",
+        "distractorType": "overgeneralized",
+        "why": "CDN 검증은 서명이 있을 때만 작동하는 선택적 게이트라 무서명 우회를 못 막는다. 오리진 검증이 그 빈틈을 메운다."
+      },
+      {
+        "text": "X-Client-Request-URL 헤더에 담긴 원본 URL로 검증한다",
+        "correct": true,
+        "why": "CDN은 서명 파라미터를 지운 URL을 오리진에 보내고 원본은 이 헤더에 담아 전달한다. 오리진 검증의 진실 원본은 헤더다."
+      },
+      {
+        "text": "라우팅 규칙에서 서명 파라미터를 다시 붙여 오리진에 전달한다",
+        "distractorType": "vendor-mixup",
+        "why": "서명 파라미터가 LB의 호스트·경로 규칙과 충돌하는 것을 예방하려고 지워 주는 설계다. 재삽입은 그 취지를 되돌린다."
+      }
+    ],
+    "explanation": "Cloud CDN은 오리진에 요청을 보낼 때 서명 관련 쿼리 파라미터를 제거한다. 이유는 오리진 앞의 Cloud Load Balancing이 호스트·경로 규칙에 쿼리 파라미터를 포함할 수 있어(공식 문서의 A/B 테스팅 예제) 라우팅 충돌을 예방하는 방어적 설계다. 그 결과 정상 검증된 요청과 파라미터를 지운 악의 요청이 오리진에서 똑같은 모습으로 도착해 구분할 수 없으므로, 오리진은 X-Client-Request-URL 헤더에 담겨 온 원본 URL로 시그니처를 재검증해야 한다. 경유층이 요청을 다시 쓴다는 선택지를 상정하지 않으면 오리진 검증 설계 자체가 성립하지 않는다.",
+    "source": "Google Cloud CDN 공식 문서 — Use signed URLs(서명 컴포넌트는 오리진 요청 전에 URL에서 제거되고, 원본 서명 URL은 x-client-request-url 요청 헤더로 전달된다), 당근 2025 GCP 밋업 발표 「대규모 이미지 서비스 with Cloud CDN, Cloud Run, Cloud Storage」"
+  },
+  {
+    "id": "cdn-hitrate-arithmetic-001",
+    "topic": "cdn",
+    "tags": ["hit-rate", "miss-rate", "cost"],
+    "difficulty": 2,
+    "question": "이미지 CDN의 캐시 히트율을 95%에서 98%로 올렸다. 오리진(동적 리사이즈 컴퓨트)의 요청 관점에서 이 변화는?",
+    "options": [
+      {
+        "text": "3%p가량 개선된 수준이라 오리진 부하는 거의 비슷하다",
+        "distractorType": "plausible-number",
+        "why": "히트율의 표면 차이(3%p)를 오리진 축에 그대로 이식한 것이다. 비용은 h가 아니라 1−h에 비례한다."
+      },
+      {
+        "text": "미스율이 5%에서 2%로 줄어 오리진 요청은 60% 감소한다",
+        "correct": true,
+        "why": "오리진 도달 요청은 미스율에 비례한다. 2/5 = 40%가 남으므로 60%가 사라진다."
+      },
+      {
+        "text": "CDN 송신료가 히트율만큼 줄어 요금이 함께 내려간다",
+        "distractorType": "inverted",
+        "why": "egress는 전송 총량에 비례하고 히트율과 무관하다. 줄어드는 것은 오리진 쪽 비용뿐이다."
+      },
+      {
+        "text": "히트율은 통계 지표일 뿐 오리진 부하와는 무관하다",
+        "distractorType": "overgeneralized",
+        "why": "오리진 도달 요청 = 전체 × (1−h)라는 직접 관계식이 있다. 무관이 아니라 비례 관계다."
+      }
+    ],
+    "explanation": "히트율 논의는 언제나 미스율(1−h)로 환산해야 정확하다. 95→98%는 미스율 5→2%, 즉 오리진 도달 요청이 60% 사라지는 것이다. 오리진이 컴퓨트(동적 리사이즈)라면 미스 1건이 연산을 수반하므로 비용·안정성 축이 그 비율로 줄어든다. 반면 CDN egress는 전송 총량에 비례하므로 이 개선으로 줄지 않는다. 요청 히트율과 바이트 히트율, CDN 비용과 오리진 비용을 축마다 분리해 말하는 것이 정확한 비용 논의의 조건이다.",
+    "source": "AWS CloudFront Developer Guide — Origin Shield(오리진 요청 절감), 당근 2025 GCP 밋업 발표(미스 비용 구조)"
+  },
+  {
+    "id": "cdn-egress-axis-001",
+    "topic": "cdn",
+    "tags": ["cost", "egress", "billing"],
+    "difficulty": 1,
+    "question": "캐시 히트율을 90%에서 96%로 올렸는데 CDN 요금은 줄지 않았다. 가장 먼저 확인해야 할 해석은?",
+    "options": [
+      {
+        "text": "CDN egress·요청 과금은 히트율과 무관하므로 정상이다",
+        "correct": true,
+        "why": "줄어든 것은 미스율에 비례하는 오리진 쪽 비용이다. CDN 청구 축(전송량·요청 수)은 그대로다."
+      },
+      {
+        "text": "히트율 지표가 잘못 집계되고 있으므로 로그를 먼저 의심한다",
+        "distractorType": "overgeneralized",
+        "why": "'히트율이 오르면 요금도 준다'는 전제가 틀렸다. 지표가 아니라 청구 구조를 먼저 본다."
+      },
+      {
+        "text": "히트가 늘면서 캐시 응답의 전송량이 늘어 요금이 오른 것이다",
+        "distractorType": "one-step-short",
+        "why": "전송량은 요청 수와 객체 크기로 정해질 뿐 히트 여부로 늘지 않는다. 같은 요청에 같은 바이트가 나간다."
+      },
+      {
+        "text": "축출이 늘어 히트율 개선분이 상쇄된 것으로 보면 된다",
+        "distractorType": "adjacent",
+        "why": "축출은 히트율 자체에 영향을 주는 인접 요인이지만 요금 불변을 설명하지 못한다. 청구 축이 다르다."
+      }
+    ],
+    "explanation": "비용 모델은 대략 '요청 수 × 요청 단가 + 전송 바이트 × egress 단가 + 미스율 × (오리진 컴퓨트+fetch 비용)'이다. 히트율 h는 셋째 항에만 들어가므로, 히트율을 올려도 CDN 청구(첫째·둘째 항)는 전송 구조가 그대로인 한 그대로다. \"히트율을 올렸는데 CDN 요금이 안 줄었다\"는 이상 징후가 아니라 구조의 정상이다. 진짜로 CDN 요금을 줄이려면 전송 바이트 자체(포맷·해상도)나 요청 수 구조를 건드려야 한다.",
+    "source": "AWS CloudFront·Google Cloud CDN 공식 요금 문서(데이터 전송·요청 단위 과금)"
+  },
+  {
+    "id": "cdn-request-pricing-001",
+    "topic": "cdn",
+    "tags": ["cost", "request-pricing", "small-objects"],
+    "difficulty": 2,
+    "question": "이미지 CDN이다. 객체당 평균 8KB, 하루 요청 20억 건. 비용 구조에서 가장 먼저 봐야 할 축은?",
+    "options": [
+      {
+        "text": "전송량 — 하루 16TB를 내보내니 바이트 단가가 청구를 지배한다",
+        "distractorType": "one-step-short",
+        "why": "전송량은 과금 축이 맞지만 이 트래픽에서는 지배축이 못 된다. 크기 직관이 건당 과금이 쌓이는 축을 가렸다."
+      },
+      {
+        "text": "히트율 — 캐시가 잘 되면 요청 수 자체가 줄어든다",
+        "distractorType": "inverted",
+        "why": "캐시는 요청 수를 줄이지 않는다. 히트율이 줄이는 것은 오리진 도달뿐이다."
+      },
+      {
+        "text": "오리진 egress — 미스가 나면 원본에서 나가는 요금이 청구를 지배한다",
+        "distractorType": "adjacent",
+        "why": "오리진 egress도 실제 비용 항목이지만 히트율이 높은 이미지 서빙에서는 미스분에만 발생한다. 20억 건 전체에 곱해지는 축이 아니다."
+      },
+      {
+        "text": "요청 단가 — 객체가 가벼워도 건당 과금은 요청 수에 그대로 곱해진다",
+        "correct": true,
+        "why": "전송량이 작아도 요청 20억 건의 단가는 그대로 곱해진다. 이 트래픽의 비용 축은 요청 수다."
+      }
+    ],
+    "explanation": "CDN 과금은 전송량과 요청 건당 단가가 함께 있다. 객체가 작고 요청이 많으면 전송량 축은 작아지지만 요청 축은 그대로 커서, 합산에서 요청 단가가 지배할 수 있다. 캐시 히트율은 요청 수 자체를 줄이지 못하므로(오리진 도달만 줄인다) 이 축의 개선은 매니페스트·목록 API 설계 같은 요청 수 구조에서 나온다. 비용 논의는 \"어떤 트래픽 믹스인가\"부터 축을 정하고 시작해야 한다.",
+    "source": "AWS CloudFront 공식 요금 문서(요청당 과금), Google Cloud CDN 가격 문서(요청 비용)"
+  },
+  {
+    "id": "cdn-crosscloud-egress-001",
+    "topic": "cdn",
+    "tags": ["cost", "cross-cloud", "egress"],
+    "difficulty": 2,
+    "question": "원본은 GCS에 있고 CDN만 AWS CloudFront로 구성하려 한다. 비용 검토에서 반드시 포함해야 할 항목은?",
+    "options": [
+      {
+        "text": "없다 — CDN 요금표와 스토리지 요금표만 보면 된다",
+        "distractorType": "overgeneralized",
+        "why": "원본→CDN 구간이 빠진다. 미스가 발생할 때마다 GCS에서 인터넷으로 나가는 egress가 과금된다."
+      },
+      {
+        "text": "GCS 저장 비용이 CDN 캐시 용량만큼 늘어나는 항목",
+        "distractorType": "adjacent",
+        "why": "CDN 캐시는 GCS가 아니라 CDN 쪽에 쌓인다. 스토리지 용량과는 무관한 인접 항목이다."
+      },
+      {
+        "text": "원본(GCS)→CDN 구간의 인터넷 egress 비용",
+        "correct": true,
+        "why": "크로스 클라우드 조합에서는 미스 fetch가 인터넷 egress로 과금된다. 같은 클라우드면 내부 처리되는 구간이다."
+      },
+      {
+        "text": "CloudFront 캐시 미스율 예산 — 히트율만 높게 잡으면 된다",
+        "distractorType": "one-step-short",
+        "why": "히트율 관리도 필요하지만 미스가 남는 이상 원본 구간 과금은 계속된다. 항목 자체를 누락했다."
+      }
+    ],
+    "explanation": "원본과 CDN이 클라우드를 달리하면 미스 fetch가 인터넷 egress로 과금된다. 같은 클라우드 안이라면 이 구간이 내부 처리되거나 무료가 되는 경우가 많다 — 당근이 Cloud Run과 Cloud Storage 사이 트래픽이 무료라 밝힌 것, 그리고 원본이 GCP로 이사하면서 CDN도 자연스럽게 GCP가 된 이유가 정확히 이 비용 논리다. 미스율에 비례하는 비용은 오리진 fetch와 오리진 egress까지 포함하므로, 원본 위치 선정은 CDN 선택과 함께 계산되어야 한다.",
+    "source": "Google Cloud Storage 공식 요금 문서(인터넷 egress), 당근 2025 GCP 밋업 발표(Cloud Run↔GCS 무료 트래픽)"
+  },
+  {
+    "id": "cdn-multicdn-cost-001",
+    "topic": "cdn",
+    "tags": ["multi-cdn", "cache-fragmentation", "operations"],
+    "difficulty": 2,
+    "question": "가용성을 이유로 멀티 CDN 도입을 검토 중이다. 이 결정이 함께 사야 할 비용은?",
+    "options": [
+      {
+        "text": "캐시가 벤더별로 쪼개져 히트율이 떨어지고 무효화·로그·서명을 N벌로 운영해야 하는 것",
+        "correct": true,
+        "why": "벤더마다 캐시가 따로 쌓여 콜드 미스가 재발하고 무효화 API·로그 필드·서명 방식이 갈라진다. 보험의 보험료다."
+      },
+      {
+        "text": "물량 커밋이 두 벤더로 나뉘어도 각각 할인 구간에 들어가 단가가 내려가는 것",
+        "distractorType": "inverted",
+        "why": "트래픽을 나눠도 총량은 같고 커밋 할인은 계약 조건이다. 자동 할인은 성립하지 않는다."
+      },
+      {
+        "text": "벤더별 대시보드가 늘어 모니터링 SaaS 좌석 요금이 추가되는 것",
+        "distractorType": "plausible-number",
+        "why": "운영 대상이 N벌이 되어 비용은 늘어난다. 가용성과 운영 단순성은 반대 방향으로 움직인다."
+      },
+      {
+        "text": "DNS 레코드와 TLS 인증서를 벤더마다 관리해야 하는 것",
+        "distractorType": "adjacent",
+        "why": "DNS는 진입 비용일 뿐이다. 캐시 분할과 일관성 전선이라는 본체를 못 보았다."
+      }
+    ],
+    "explanation": "멀티 CDN은 무료 보험이 아니라 히트율과 운영 단순성으로 사는 보험이다. 각 벤더가 자기 캐시를 따로 채우므로 전체 히트율은 벤더별 히트율의 가중합이 되고, 트래픽을 옮기는 순간 콜드 미스가 재발한다. 여기에 무효화 API·서명 방식·로그 필드가 벤더마다 달라 일관성을 위한 별도 설계(이벤트 소싱 무효화, 로그 정규화 스키마)가 필요하다. 히트율이 이미 98%+이거나 무효화 정확성이 생명인 서비스에서는 이 대가가 이득을 넘을 수 있다 — 도입은 계산된 교환이어야 한다.",
+    "source": "Google Cloud CDN·AWS CloudFront 공식 무효화 API 문서(벤더별 단위·전파 상이), 당근 2025 GCP 밋업 발표(단일 장애 도메인 회피 동기)"
+  },
+  {
+    "id": "cdn-cold-failover-001",
+    "topic": "cdn",
+    "tags": ["failover", "cold-cache", "origin-storm"],
+    "difficulty": 3,
+    "question": "장애로 트래픽을 예비 CDN으로 전환한 직후 오리진(Cloud Run 리사이즈)에 부하가 폭증했다. 가장 유력한 원인은?",
+    "options": [
+      {
+        "text": "예비 CDN의 PoP가 오리진에서 지리적으로 멀어져서",
+        "distractorType": "adjacent",
+        "why": "거리는 왕복 지연의 축이지 오리진 요청 수를 늘리지 않는다. 폭주의 원인이 아니다."
+      },
+      {
+        "text": "양쪽 CDN에서 같은 객체를 동시에 받아 이중 요청이 된 것이다",
+        "distractorType": "inverted",
+        "why": "전환은 트래픽을 옮기는 것이지 복제하는 게 아니다. 요청 수는 대체로 그대로다."
+      },
+      {
+        "text": "예비 CDN이 오리진의 Cache-Control을 무시해서",
+        "distractorType": "vendor-mixup",
+        "why": "헤더 해석 차이는 실재하는 벤더 간 함정이지만 폭주의 시점(전환 직후)과 맞지 않는다."
+      },
+      {
+        "text": "캐시가 비어 있어 인기 객체 전체가 동시에 미스로 오리진을 때린 것이다",
+        "correct": true,
+        "why": "전환 대상 CDN은 콜드 상태다. 히트율 98% 서비스도 빈 캐시 앞에서는 미스 폭주가 된다."
+      }
+    ],
+    "explanation": "전환 대상 CDN의 캐시는 비어 있다. 인기 객체 전체가 동시에 미스로 나가면서 오리진에 순간 폭주가 걸리고, 오리진이 컴퓨트(동적 리사이즈)라면 미스 1건이 연산을 수반해 더 치명적이다. 방어는 점진 램프(소량→전량), 인기 상위 객체 사전 워밍, 실드·요청 병합·레이트리밋의 조합이다. 페일오버 설계에서 '전환 자체가 만드는 부하'를 별도 축으로 다루지 않으면, 장애 복구가 두 번째 장애를 만드는 구조가 된다.",
+    "source": "당근 2025 GCP 밋업 발표(미스 = Cloud Run 동적 리사이즈 비용, 1% 카나리의 점진 램프 감각)"
+  },
+  {
+    "id": "cdn-warm-standby-001",
+    "topic": "cdn",
+    "tags": ["multi-cdn", "warm-standby", "failover"],
+    "difficulty": 2,
+    "question": "평시 트래픽 100%를 주력 CDN에 두고, 장애 때만 예비 CDN으로 넘기는 계획이다. 이 계획의 구조적 결함은?",
+    "options": [
+      {
+        "text": "CDN을 두 벤더로 나누면 캐시가 쪼개져 어느 쪽도 히트율이 안 오르는 것이다",
+        "distractorType": "overgeneralized",
+        "why": "이 계획은 평시 트래픽을 한 곳에만 보내므로 캐시가 쪼개지지 않는다. 멀티 CDN 일반론을 트래픽 분배가 없는 구성에 잘못 적용한 것이다."
+      },
+      {
+        "text": "예비 CDN이 콜드 상태로 있어 전환 시 캐시와 운영 경로가 검증 안 된 것이다",
+        "correct": true,
+        "why": "평시 소량 트래픽(웜 스탠바이)이 캐시를 데우고 런북을 상시 검증한다. 실전이 처음이어서는 안 된다."
+      },
+      {
+        "text": "예비 CDN 캐시를 주기적으로 주력에서 복제해 두면 해결된다",
+        "distractorType": "one-step-short",
+        "why": "벤더 간 캐시 복제는 불가능하다. 각자 자기 트래픽으로만 데워진다."
+      },
+      {
+        "text": "장애 시점에 예비 CDN을 먼저 웜업해 두면 되는 문제다",
+        "distractorType": "inverted",
+        "why": "장애 중 웜업은 오리진을 그대로 때리는 작업이다. 폭주를 키울 뿐이다."
+      }
+    ],
+    "explanation": "페일오버는 실전이 처음이 아니어야 한다. 평시 100/0 배분은 예비 CDN의 캐시를 항상 콜드로 두고, 전환 절차·계약 커밋·모니터링 경로도 검증되지 않은 채 둔다. 그래서 평시에도 제2벤더에 소량 트래픽을 흘려 두는 웜 스탠바이가 정석이다 — 캐시가 데워지고, 런북이 상시 리허설되며, 인기 객체의 콜드 기간이 압축된다. '장애 때만 쓰는 벤더'는 장애 때 쓸 수 없는 벤더가 되기 쉽다.",
+    "source": "AWS Route 53 헬스체크·DNS 페일오버 공식 문서, 당근 2025 GCP 밋업 발표(점진 램프·1% 카나리)"
+  },
+  {
+    "id": "cdn-dns-ttl-001",
+    "topic": "cdn",
+    "tags": ["dns", "failover", "ttl"],
+    "difficulty": 2,
+    "question": "DNS 기반 분배 멀티 CDN에서 벤더 A 장애를 감지하고 즉시 가중치를 반전했다. 사용자 트래픽이 B로 넘어가는 속도를 지배하는 것은?",
+    "options": [
+      {
+        "text": "감지 알고리즘의 속도 — 감지만 빠르면 전환도 빨라진다",
+        "distractorType": "overgeneralized",
+        "why": "감지와 전환은 별개 축이다. 감지된 뒤에도 DNS 응답이 퍼지는 속도가 상한이다."
+      },
+      {
+        "text": "헬스체크 주기 — 프로브 간격이 곧 전환 지연이다",
+        "distractorType": "adjacent",
+        "why": "헬스체크는 감지 축이다. 감지된 뒤의 트래픽 수렴은 다른 메커니즘에 묶인다."
+      },
+      {
+        "text": "DNS 레코드의 TTL과 리졸버 캐시가 상한이다",
+        "correct": true,
+        "why": "권한 DNS 응답이 바뀌어도 리졸버와 OS 캐시가 TTL만큼 붙잡는다. 실제 수렴은 분 단위다."
+      },
+      {
+        "text": "CDN 간 로드밸런서가 트래픽을 즉시 재분배한다",
+        "distractorType": "inverted",
+        "why": "DNS 기반 구성에는 그런 중간 계층이 없다. 프록시 계층 구성과 혼동했다."
+      }
+    ],
+    "explanation": "DNS 기반 분배의 제어 루프는 분 단위다. 권한 DNS의 응답을 바꿔도 재귀 리졸버와 OS·브라우저 캐시가 TTL만큼 옛 값을 붙잡고 있어, 실제 사용자 트래픽의 수렴은 TTL + 캐시 초과분까지 늘어진다. TTL을 낮추면 페일오버는 빨라지지만 DNS 조회량과 권한 DNS 의존이 커진다 — 페일오버 속도와 DNS 비용의 트레이드오프다. 즉시 전환이 요구사항이면 분배 방식 자체를 클라이언트 사이드로 바꿔야 한다.",
+    "source": "RFC 1035 §6.2(TTL — 리졸버 캐시 지속), AWS Route 53 DNS 페일오버 공식 문서"
+  },
+  {
+    "id": "cdn-client-side-switch-001",
+    "topic": "cdn",
+    "tags": ["multi-cdn", "client-side", "streaming"],
+    "difficulty": 3,
+    "question": "동영상 서비스가 두 CDN을 운영한다. 한 벤더에 장애가 나면 재생 중인 사용자가 버퍼를 소진하기 전에 다른 벤더로 옮겨야 한다는 요구사항이다. 맞는 분배 방식은?",
+    "options": [
+      {
+        "text": "DNS 기반 가중치 — 벤더 CNAME 응답을 바꿔 주면 충분하다",
+        "distractorType": "overgeneralized",
+        "why": "DNS는 TTL만큼 지연된다. 요청 단위 전환 요구와 맞지 않는다."
+      },
+      {
+        "text": "CNAME 체이닝 — 앞단 프록시 계층이 업스트림 벤더를 골라 준다",
+        "distractorType": "adjacent",
+        "why": "즉시성은 있지만 그 계층이 새로운 단일 장애점·지연 홉이 된다. 요구사항의 주체(플레이어)와 맞지 않는다."
+      },
+      {
+        "text": "지역별 GSLB 상품으로 바꿔 지연 기반 라우팅을 적용한다",
+        "distractorType": "one-step-short",
+        "why": "GSLB도 결국 DNS 응답을 바꾸는 방식이라 TTL 상한은 그대로다."
+      },
+      {
+        "text": "클라이언트 사이드 선택 — 플레이어가 매니페스트의 세그먼트 호스트를 바꾼다",
+        "correct": true,
+        "why": "ABR 플레이어는 어차피 매니페스트를 해석해 세그먼트를 고른다. 호스트만 바꾸면 DNS 없이 요청 단위 전환이 된다."
+      }
+    ],
+    "explanation": "전환 지연 요구가 '요청 단위'이면 클라이언트가 선택권을 가져야 한다. ABR 스트리밍은 플레이어가 매니페스트를 해석해 세그먼트를 고르는 구조라, 세그먼트 호스트만 벤더별로 바꿔 주면 DNS 개입 없이 다음 요청부터 전환이 가능하다. 여기에 타임아웃·재버퍼링 같은 실측(RUM) 신호를 얹어 벤더 성능을 관측하고 반영할 수도 있다. 웹 브라우저에는 이런 훅을 걸 곳이 적어 DNS 기반이 현실적이다 — 플랫폼별로 정답이 다르다는 것 자체가 분배 방식 설계의 내용이다.",
+    "source": "RFC 8216(HTTP Live Streaming — 매니페스트 기반 세그먼트 URL 선택), 당근 2025 GCP 밋업 발표(실측 기반 관측 원칙)"
+  },
+  {
+    "id": "cdn-partial-outage-001",
+    "topic": "cdn",
+    "tags": ["observability", "partial-outage", "rum"],
+    "difficulty": 3,
+    "question": "전역 5xx 알럿은 잡히지 않았는데 한국 지역 사용자의 이미지 로딩 실패만 급증했다. 감지 체계의 무엇을 고쳐야 하나?",
+    "options": [
+      {
+        "text": "지역×캐시상태×오류코드로 쪼갠 자체 RUM 계측을 갖춘다",
+        "correct": true,
+        "why": "실제 장애는 특정 리전·PoP만 나쁜 부분 장애다. 전역 집계에 희석되지 않게 차원을 나눠야 보인다."
+      },
+      {
+        "text": "벤더 statuspage를 상시 폴링하는 알럿 연동을 추가한다",
+        "distractorType": "overgeneralized",
+        "why": "statuspage는 늦고 불완전할 수 있다. 자체 계측이 원본이다."
+      },
+      {
+        "text": "전역 알럿의 임계를 낮춰 작은 이탈도 잡히게 한다",
+        "distractorType": "one-step-short",
+        "why": "임계를 낮추면 노이즈 알럿이 폭주한다. 문제는 임계가 아니라 층화 부재다."
+      },
+      {
+        "text": "한국 리전 오리진 서버의 리소스 알럿을 새로 단다",
+        "distractorType": "adjacent",
+        "why": "끊김의 원인이 엣지 국부에 있으면 오리진 지표에는 나타나지 않는다. 감지 계층을 오리진으로 옮겨 짚은 착오다."
+      }
+    ],
+    "explanation": "실제 CDN 장애의 모습은 '벤더 전체 다운'이 아니라 특정 리전·PoP·경로만 나쁜 부분 장애다. 전역 집계에 섞이면 이탈이 희석되어 임계를 넘지 않고, 벤더 statuspage도 늦고 불완전할 수 있다. 그래서 지역×캐시상태×오류코드 차원을 로그에 남기고 쪼개서 보는 자체 계측이 원본이며, 임계는 절대값보다 동일 시간대 베이스라인 대비 이탈로 잡는 것이 노이즈에 강하다. 당근이 LB 로그를 BigQuery에 쌓고 서비스별 대시보드로 보는 것도 같은 구조 — 관측의 차원 설계가 감지 능력의 상한을 정한다.",
+    "source": "당근 2025 GCP 밋업 발표(LB 로그→BigQuery→대시보드, 지역·서비스별 관측)"
+  },
+  {
+    "id": "cdn-synthetic-rum-001",
+    "topic": "cdn",
+    "tags": ["monitoring", "synthetic", "rum"],
+    "difficulty": 3,
+    "question": "합성 모니터링에서 예비 벤더가 30% 빨라 주력을 교체했는데, 실사용자 p95는 나빠졌다. 가장 유력한 설명은?",
+    "options": [
+      {
+        "text": "교체 직후 캐시가 콜드해서 일시적으로 나쁘게 측정된 것이다",
+        "distractorType": "one-step-short",
+        "why": "콜드 효과는 실재하지만 시간이 지나도 회복되지 않는다면 설명이 되지 않는다."
+      },
+      {
+        "text": "소수 뷰포인트의 합성 점수가 실사용자 분포를 대표하지 못한 것이다",
+        "correct": true,
+        "why": "합성은 통제된 재현성 있는 측정이지 대표 표본이 아니다. 벤더 비교 기준은 층화된 RUM이어야 한다."
+      },
+      {
+        "text": "실사용자 지표가 노이즈라서 합성 점수가 진짜 성능이다",
+        "distractorType": "inverted",
+        "why": "RUM은 편차가 크지만 진짜 경험이다. 합성을 진실로 삼는 순간 측정 지점 편향을 못 본다."
+      },
+      {
+        "text": "신규 벤더의 TLS 인증서 검증이 느려 첫 연결이 느린 것이다",
+        "distractorType": "adjacent",
+        "why": "핸드셰이크 축의 가능성은 있으나 p95 전반 악화의 주된 설명으로는 근거가 없다."
+      }
+    ],
+    "explanation": "합성 모니터링은 내가 통제하는 소수 뷰포인트·조건에서 재현성 있게 재는 도구다. 그 강점이 곧 한계라, 실사용자의 지역·ISP·디바이스 분포를 대표하지 못한다. 벤더 비교의 기준값은 RUM에 두되 CDN 식별 태그·지역 층화·동시간대 비교를 갖춰야 공정하다. 합성은 회귀 감지와 페일오버 판정 입력으로, RUM은 사용자 경험의 진실로 — 역할 분담을 정해 두지 않으면 '점수로 갈았는데 실제는 나빠졌다'는 함정에 빠진다.",
+    "source": "Google Cloud Synthetic Monitoring 공식 문서(지정된 위치에서 수행), 당근 2025 GCP 밋업 발표(실측 기반 관측 스택)"
+  },
+  {
+    "id": "cdn-auto-failover-001",
+    "topic": "cdn",
+    "tags": ["failover", "automation", "blast-radius"],
+    "difficulty": 2,
+    "question": "CDN 벤더 장애 시 자동 페일오버를 도입하려 한다. 자동화가 만드는 가장 큰 리스크는?",
+    "options": [
+      {
+        "text": "자동화 스크립트의 버그 — 사람이 했으면 안 생겼을 오류",
+        "distractorType": "adjacent",
+        "why": "버그는 자동·수동 모두에 있다. 자동화 고유의 리스크는 판단의 결여에서 나온다."
+      },
+      {
+        "text": "없다 — 자동 전환은 수동보다 언제나 낫다고 본다",
+        "distractorType": "overgeneralized",
+        "why": "잘못된 신호로 살아 있는 벤더를 버릴 수 있고 전환 자체가 콜드 폭주를 유발하기도 한다."
+      },
+      {
+        "text": "계측 오류·국부 장애를 전체 장애로 읽고 정상 벤더를 버리는 것",
+        "correct": true,
+        "why": "자동 판정은 신호 품질에 묶인다. 다수결·지속 조건·점진 램프·원상복구로 블래스트 레디어스를 제한한다."
+      },
+      {
+        "text": "알럿이 자주 울려 on-call의 대응 감각이 무뎌지는 것",
+        "distractorType": "inverted",
+        "why": "알럿 피로는 실재하는 운영 문제지만 페일오버 자동화의 고유 리스크는 아니다."
+      }
+    ],
+    "explanation": "자동 전환은 복구 시간을 줄이지만 판단을 내리는 주체가 신호 품질에 종속된다. 계측 오류나 특정 리전의 국부 장애를 전체 장애로 읽으면 살아 있는 벤더를 버리게 되고, 전환 자체가 콜드 캐시 폭주라는 새 사고를 만들 수 있다. 실무 타협은 짧은 윈도의 다수결·지속 조건, 점진 램프, 자동 원상복구로 블래스트 레디어스를 제한하는 것이다. 조직의 운영 성숙도에 맞춰 '자동 판정 + 램프'와 '자동 알럿 + 수동 런북' 사이를 고르는 것이 설계자의 답이다.",
+    "source": "AWS Route 53 헬스체크·DNS 페일오버 공식 문서, 당근 2025 GCP 밋업 발표(1% 카나리 — 점진 램프)"
+  },
+  {
+    "id": "cdn-query-key-default-001",
+    "topic": "cdn",
+    "tags": ["cache-key", "query-params", "variants"],
+    "difficulty": 3,
+    "question": "이미지 CDN에서 리사이즈 옵션을 쿼리 파라미터(w=300&f=webp)로 내고, 캐시 키에 쿼리 전체를 포함하는 기본값을 그대로 쓴다(당근 구조). 이 선택이 성립하는 근거는?",
+    "options": [
+      {
+        "text": "쿼리 전체 키가 업계 표준이라 커스터마이징이 불필요해서",
+        "distractorType": "overgeneralized",
+        "why": "기본값은 표준이 아니라 벤더 기본일 뿐이다. 근거가 아니라 관성이다."
+      },
+      {
+        "text": "트래킹 파라미터는 트래픽이 적어 미스 영향을 무시할 수 있어서",
+        "distractorType": "one-step-short",
+        "why": "임의 파라미터의 미스·오염 리스크는 실재하고 완화는 화이트리스트다. 이 설계가 성립하는 근거가 아니다."
+      },
+      {
+        "text": "쿼리가 키에 있으면 전부 히트되어 오리진이 쉴 수 있어서",
+        "distractorType": "inverted",
+        "why": "쿼리 축이 늘수록 키는 잘게 쪼개진다. 히트가 아니라 분열의 방향이다."
+      },
+      {
+        "text": "파라미터가 변형을 정의해 값이 바뀌면 미스→오리진이 동적 생성하는 것이 의도라서",
+        "correct": true,
+        "why": "키 공간 = 변형 공간이 성립한다. w=300&f=webp는 곧 '300px WebP 변형'이라는 비즈니스 객체다."
+      }
+    ],
+    "explanation": "캐시 키 설계의 원칙은 '키 공간 = 실제 변형 공간'이다. 리사이즈 파라미터가 변형을 정의하는 구조에서는 쿼리 전체 키가 오히려 정합적이다 — 값이 바뀌면 미스가 나고, 오리진(Cloud Run)이 그 변형을 동적으로 만들어 채운 뒤 캐시되는 것이 의도한 동작이다(당근의 기본 키 선택). 남는 리스크는 변형이 아닌 파라미터(utm·추적 코드)가 키에 섞이는 것이고, 그 완화는 화이트리스트다. '쿼리는 캐시의 적'이라는 경구는 트래킹 파라미터 맥락에서만 참이지 변형 파라미터 맥락에서는 거짓이다.",
+    "source": "당근 2025 GCP 밋업 발표(기본 캐시 키 — 쿼리 매개변수가 바뀌면 미스, Cloud Run 동적 리사이즈)"
+  },
+  {
+    "id": "cdn-param-order-001",
+    "topic": "cdn",
+    "tags": ["cache-key", "normalization", "cloudfront"],
+    "difficulty": 2,
+    "question": "CloudFront 앞의 이미지 서비스에서 오리진 요청이 눈에 띄게 늘었다. 로그를 보니 w=300&f=webp 로 저장된 엔트리 옆에 f=webp&w=300 miss가 이미지마다 나란히 쌓인다. 원인은?",
+    "options": [
+      {
+        "text": "TTL이 짧아 같은 변형의 엔트리가 만료를 반복해 재검증이 늘어난 것이다",
+        "distractorType": "adjacent",
+        "why": "만료로 인한 재검증은 같은 문자열 안의 이야기다. 신선도 축을 카디널리티 축에 겹쳐 읽었다."
+      },
+      {
+        "text": "요청이 서로 다른 PoP로 흩어져 캐시가 아직 각 PoP에 퍼지지 않은 것이다",
+        "distractorType": "one-step-short",
+        "why": "콜드 PoP의 중복 fetch는 실재하는 현상이지만 같은 쌍이 이미지마다 반복되는 규칙성은 못 만든다."
+      },
+      {
+        "text": "쿼리 문자열이 하나라도 다르면 CloudFront는 다른 키로 캐싱하기 때문이다",
+        "correct": true,
+        "why": "같은 의미의 URL이라도 문자열이 다르면 별도 엔트리가 된다. 순서·대소문자가 대표 사례다."
+      },
+      {
+        "text": "이런 쿼리는 CDN이 알아서 정규화해 주는 게 보통이라, CloudFront에서 그 설정이 빠진 것이다",
+        "distractorType": "vendor-mixup",
+        "why": "정규화는 CDN이 해주는 게 아니라 URL을 만드는 쪽의 최소 위생이다. 벤더를 바꿔도 규칙은 필요하다."
+      }
+    ],
+    "explanation": "CloudFront는 쿼리 파라미터의 순서·대소문자에 따라 다르게 캐싱한다(당근이 2019년에 실측해 명시한 동작). 같은 변형을 가리키는 요청이 철자만 다르면 별도 캐시 엔트리가 되어 히트율이 분열한다. 해법은 CDN을 바꾸는 것이 아니라 URL을 만드는 쪽에서 파라미터 순서와 대소문자를 고정하는 생성 규칙이거나, CDN의 캐시 키 정책으로 정규화·화이트리스트를 명시하는 것이다. 정규화는 캐시 위생의 최소 단위이며 두 자릿수 % 포인트를 움직이는 축이다.",
+    "source": "당근 테크블로그 「AWS Lambda@Edge에서 실시간 이미지 리사이즈 & WebP 형식으로 변환」(2019) — CloudFront 쿼리 파라미터 순서·대소문자 캐싱"
+  },
+  {
+    "id": "cdn-key-hygiene-first-001",
+    "topic": "cdn",
+    "tags": ["cache-key", "hit-rate", "prioritization"],
+    "difficulty": 3,
+    "question": "히트율 88% 이미지 CDN의 개선 예산이 한 가지뿐이다. 어디에 쓰는 것이 가장 큰 효과를 내나?",
+    "options": [
+      {
+        "text": "축출 정책을 LRU에서 LFU로 교체하는 성능 개선 작업",
+        "distractorType": "one-step-short",
+        "why": "같은 용량에서 정책 간 차이는 한 자릿수 % 포인트다. 유의미하지만 가장 큰 축이 아니다."
+      },
+      {
+        "text": "키 정규화 — 파라미터 화이트리스트·정렬·쿠키 제거 작업",
+        "correct": true,
+        "why": "가짜 키 축(utm·순서·쿠키)이 만드는 분열은 두 자릿수 % 포인트를 움직인다. 키 위생이 먼저다."
+      },
+      {
+        "text": "캐시 용량을 지금의 두 배로 늘리는 증설 작업",
+        "distractorType": "overgeneralized",
+        "why": "롱테일 분포에서 추가 용량이 흡수하는 꼬리의 기여는 작다. 비례 개선이 되지 않는다."
+      },
+      {
+        "text": "전 객체의 TTL을 1년으로 일괄 상향하는 작업",
+        "distractorType": "adjacent",
+        "why": "변경되는 객체에서 무효화 문제가 커지고 만료 집중 구조도 그대로다. 정규화와는 다른 축이다."
+      }
+    ],
+    "explanation": "같은 용량에서 축출 정책 간 히트율 차이는 보통 한 자릿수 % 포인트지만, 키 정규화·화이트리스트는 두 자릿수 % 포인트를 움직인다. 트래킹 파라미터·순서 차이·쿠키 같은 가짜 축은 실제 변형이 아닌 엔트리를 무한히 만들어 트래픽을 분열시키기 때문이다. 용량 증설은 롱테일 특성상 수익이 체감되고, TTL 상향은 무효화 문제를 다른 곳으로 미룰 뿐이다. 개선 순서는 키 위생 → 용량·계층 → 정책 튜닝이며, 원인 규명 없는 파라미터 조정은 이 우선순위를 흐린다.",
+    "source": "당근 테크블로그(2019) — 쿼리 순서·대소문자 캐시 분열 실측, AWS CloudFront 캐시 정책 공식 문서"
+  },
+  {
+    "id": "cdn-serverless-neg-001",
+    "topic": "cdn",
+    "tags": ["cloud-cdn", "cloud-run", "serverless-neg", "gcp"],
+    "difficulty": 1,
+    "question": "Google Cloud에서 Cloud CDN의 오리진을 Cloud Run 애플리케이션으로 지정하려 한다. 필요한 구성은?",
+    "options": [
+      {
+        "text": "Cloud Run을 백엔드 서비스로 LB에 직접 등록하면 된다",
+        "distractorType": "vendor-mixup",
+        "why": "Cloud Run은 LB 백엔드로 직접 붙지 못한다. 다른 클라우드의 인스턴스 그룹 감각을 이식한 것이다."
+      },
+      {
+        "text": "Cloud Run URL로 리다이렉트하도록 LB 규칙을 만들면 된다",
+        "distractorType": "adjacent",
+        "why": "리다이렉트는 왕복을 추가하고 CDN 캐시 구조도 깨진다. 오리진 지정이 아니다."
+      },
+      {
+        "text": "Serverless NEG로 Cloud Run을 LB 백엔드에 매핑하면 된다",
+        "correct": true,
+        "why": "캐싱 가능 콘텐츠를 원본으로 내리려면 부하분산기가 필요하고 Cloud Run은 서버리스 NEG로 매핑된다 — 공식 권장이다."
+      },
+      {
+        "text": "Cloud Run 인그레스를 내부 전용으로 바꿔 직접 이으면 된다",
+        "distractorType": "one-step-short",
+        "why": "인그레스 정책은 접근 경계의 문제다. LB·NEG 없이는 CDN의 오리진이 될 수 없다."
+      }
+    ],
+    "explanation": "GCP에서 캐싱 가능한 콘텐츠를 Cloud Run으로 서빙하려면 Cloud CDN → Cloud Load Balancing(L7) → Serverless NEG → Cloud Run의 연결이 공식 권장 구성이다. Cloud Run은 LB 백엔드로 직접 등록되지 않고 반드시 서버리스 NEG로 매핑되어야 하며, TLS 인증서는 Certificate Manager가 프론트엔드에 주입한다. 이 그림은 그냥 외울 게 아니라 '오리진이 컴퓨트일 때 검증 지점이 어디로 가는가'의 사례로 소화할 것 — 앞의 서명 검증 문제들이 정확히 이 구조 위에서 터진다.",
+    "source": "Google Cloud 공식 문서 — Cloud Run 캐싱 가능한 콘텐츠 서빙(부하분산기 + 서버리스 NEG 매핑), 당근 2025 GCP 밋업 발표"
+  }
+]

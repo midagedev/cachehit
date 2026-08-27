@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cachehit — 당신의 캐시 히트율은?</title>
+<meta name="description" content="CDN·캐싱·이미지/동영상 서빙 파이프라인을 얼마나 알고 계신가요? 백엔드 개발자를 위한 콘텐츠 서빙 퀴즈.">
+<meta property="og:title" content="cachehit — 당신의 캐시 히트율은?">
+<meta property="og:description" content="CDN·캐싱·이미지/동영상 서빙 퀴즈. 모든 오답은 실제 오개념에서 가져왔습니다.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="cachehit">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:url" content="https://midagedev.github.io/cachehit/">
+<!-- summary_large_image 카드는 이 이미지가 없으면 렌더되지 않는다. 생성: python3 tools/make-og.py -->
+<meta property="og:image" content="https://midagedev.github.io/cachehit/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="cachehit — 당신의 캐시 히트율은? CDN·캐싱·이미지/동영상 서빙 파이프라인 퀴즈">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="cachehit — 당신의 캐시 히트율은?">
+<meta name="twitter:description" content="CDN·캐싱·이미지/동영상 서빙 퀴즈. 모든 오답은 실제 오개념에서 가져왔습니다.">
+<meta name="twitter:image" content="https://midagedev.github.io/cachehit/assets/og.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💾</text></svg>">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<main id="app">
+
+  <!-- ── 시작 ───────────────────────────────────────── -->
+  <section id="screen-intro" class="screen">
+    <div class="hero">
+      <div class="logo">cache<span class="accent">hit</span></div>
+      <h1>당신의 캐시 히트율은?</h1>
+      <p class="lede">
+        CDN·캐싱·이미지/동영상 서빙 파이프라인.<br>
+        매일 쓰지만 정확히는 모르는 것들을 물어봅니다.
+      </p>
+
+      <div class="meta-row">
+        <span><b id="intro-count">–</b>문항</span>
+        <span><b id="intro-minutes">–</b>분</span>
+        <span>4지선다</span>
+      </div>
+
+      <button id="btn-start" class="btn btn-primary btn-lg">시작하기</button>
+
+      <div id="best-record" class="best hidden">
+        이전 최고 기록 <b></b>
+      </div>
+
+      <details class="how">
+        <summary>어떻게 만든 퀴즈인가요?</summary>
+        <div class="how-body">
+          <p>학습 효과가 검증된 방식으로 설계했습니다.</p>
+          <ul>
+            <li><b>오답이 진짜입니다.</b> 모든 오답은 현업에서 실제로 흔한 오해에서 가져왔습니다. 아무 보기나 채워 넣지 않았습니다.</li>
+            <li><b>확신도를 함께 묻습니다.</b> 확신했는데 틀린 오류가 가장 강하게 교정됩니다(hypercorrection). 그래서 그 순간을 놓치지 않고 표시합니다.</li>
+            <li><b>즉시 해설합니다.</b> 왜 정답인지뿐 아니라 <b>당신이 고른 오답이 왜 틀렸는지</b>를 함께 보여줍니다.</li>
+            <li><b>틀린 것만 다시 풉니다.</b> 피드백 직후 한 번 더 인출하지 않으면 교정한 오류가 되돌아옵니다.</li>
+          </ul>
+          <p class="how-foot">문항 저작 규약은 <a href="https://github.com/midagedev/cachehit/blob/main/AUTHORING.md" target="_blank" rel="noopener">AUTHORING.md</a>에 공개돼 있습니다.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ── 퀴즈 ───────────────────────────────────────── -->
+  <section id="screen-quiz" class="screen hidden">
+    <header class="quiz-head">
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div class="quiz-meta">
+        <span id="q-counter">1 / 20</span>
+        <span id="q-topic" class="chip"></span>
+        <span id="q-diff" class="chip chip-diff"></span>
+      </div>
+    </header>
+
+    <article class="q-card">
+      <h2 id="q-text"></h2>
+      <ul id="q-options" class="options"></ul>
+
+      <div id="confidence" class="confidence hidden">
+        <p class="confidence-label">얼마나 확신하시나요?</p>
+        <div class="confidence-btns">
+          <button class="btn btn-conf" data-conf="sure">확신해요</button>
+          <button class="btn btn-conf" data-conf="unsure">반반이에요</button>
+        </div>
+      </div>
+
+      <div id="feedback" class="feedback hidden">
+        <div id="verdict" class="verdict"></div>
+        <div id="why-yours" class="why-block hidden">
+          <span class="why-tag">고르신 답</span>
+          <p></p>
+        </div>
+        <div id="why-correct" class="why-block">
+          <span class="why-tag why-tag-ok">정답</span>
+          <p></p>
+        </div>
+        <p id="explanation" class="explanation"></p>
+        <p id="source" class="source"></p>
+        <button id="btn-next" class="btn btn-primary">다음</button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── 결과 ───────────────────────────────────────── -->
+  <section id="screen-result" class="screen hidden">
+    <div class="result-hero">
+      <p class="result-label">당신의 캐시 히트율</p>
+      <div id="result-rate" class="result-rate">0<span>%</span></div>
+      <div id="result-grade" class="result-grade"></div>
+      <p id="result-line" class="result-line"></p>
+    </div>
+
+    <div class="result-body">
+      <h3>영역별</h3>
+      <div id="topic-bars" class="topic-bars"></div>
+
+      <div id="hyper-block" class="hyper hidden">
+        <h3>확신했는데 틀린 문항</h3>
+        <p class="hyper-note">가장 값진 문항들입니다. 확신이 깨진 자리가 가장 오래 기억에 남습니다.</p>
+        <ul id="hyper-list"></ul>
+      </div>
+
+      <div class="result-actions">
+        <button id="btn-retry-wrong" class="btn btn-primary">틀린 문항만 다시 풀기</button>
+        <button id="btn-share" class="btn">결과 카드 저장</button>
+        <a id="btn-tweet" class="btn" target="_blank" rel="noopener">X에 공유</a>
+        <button id="btn-restart" class="btn btn-ghost">처음부터</button>
+      </div>
+
+      <details class="review">
+        <summary>전체 문항 다시 보기</summary>
+        <ol id="review-list" class="review-list"></ol>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <a href="https://github.com/midagedev/cachehit" target="_blank" rel="noopener">GitHub</a>
+  <span>·</span>
+  <a href="https://github.com/midagedev/cachehit/blob/main/AUTHORING.md" target="_blank" rel="noopener">문항 저작 규약</a>
+  <span>·</span>
+  <a href="https://github.com/midagedev/cachehit/issues" target="_blank" rel="noopener">문항 제보</a>
+</footer>
+
+<canvas id="card-canvas" width="1200" height="630" style="display:none"></canvas>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

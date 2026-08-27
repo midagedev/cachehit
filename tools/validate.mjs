@@ -1,0 +1,261 @@
+#!/usr/bin/env node
+// 문항 품질 게이트. AUTHORING.md §1 불변식과 §3 금지 사항을 기계적으로 검사한다.
+// 사용: node tools/validate.mjs [--json] [--only <topic>]
+//   --only <topic>  해당 topic 문항만 검사한다. 병렬 저작 시 자기 트랙만 보기 위한 것.
+
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const QDIR = join(ROOT, 'data', 'questions')
+
+const TOPICS = ['cdn', 'caching', 'image', 'video', 'storage']
+const DISTRACTOR_TYPES = [
+  'adjacent', 'inverted', 'overgeneralized', 'one-step-short',
+  'vendor-mixup', 'outdated', 'plausible-number',
+]
+
+// §3-1 정답 길이는 오답 평균의 이 배수를 넘지 않는다
+const LENGTH_RATIO_MAX = 1.4
+// §3-2 저작 회피 신호
+const BANNED_OPTION_PATTERNS = [/위의?\s*모두/, /모두\s*맞/, /정답\s*없/, /해당\s*없/, /위\s*전부/]
+// §3-4 절대 표현
+const ABSOLUTE_WORDS = ['항상', '절대', '모든', '반드시', '무조건', '결코']
+// §3-6 부정형 발문 비율 상한
+const NEGATIVE_RATIO_MAX = 0.2
+const NEGATIVE_PATTERNS = [/않은\s*것/, /아닌\s*것/, /틀린\s*것/, /옳지\s*않/]
+
+// §3-9 발문이 결함·사고를 전제하는 형태. 이때 "문제 없다"류 오답은 발문과 모순되어 즉시 소거된다.
+const PREMISE_DEFECT_PATTERNS = [
+  /결함/, /무엇이\s*깨/, /무엇이\s*문제/, /왜\s*실패/, /왜\s*깨/,
+  /사고가\s*(발생|났)/, /장애가\s*(발생|났)/, /버그/, /틀렸/, /잘못/,
+]
+// 그 전제를 부정하는 보기 = 죽은 보기
+const PREMISE_DENIAL_PATTERNS = [
+  /문제\s*없/, /이상\s*없/, /결함\s*(이|은)?\s*없/, /문제(가|되)?\s*(되지|하지)\s*않/,
+  /영향\s*(이|은)?\s*없/, /차이\s*(가|는)?\s*없/, /아무\s*(일|문제|영향)/,
+  /정상\s*(이다|동작|작동)/, /괜찮/, /손해가\s*없/, /비용이\s*들지\s*않/,
+]
+
+// ── 기계로 잡히지 않는 축 (2026-08-27 실측, 지우지 말 것) ──────────────
+// 블라인드 감사가 지목한 결함 유형 중 두 가지는 이 파일로 환원되지 않는다.
+//
+//   ① 발문 어휘 반복 — 발문이 원인을 이미 진단해 주고 정답이 그것을 되풀이한다
+//   ② 구체성 격차   — 정답만 수치·고유명사를 달고 있어 "자세한 쪽이 정답"이 된다
+//
+// 둘 다 토큰 겹침·구체성 마커 카운트로 근사해 구현하고, 감사자가 지목한 12건과
+// 미지목 8건의 격차 분포를 비교했다. 결과: 지목군의 격차 최대 +1, 대조군에도 +1이
+// 존재해 두 군이 전혀 분리되지 않았다(전체 77건 격차 최대 2). 감사자가 본 것은
+// 토큰 겹침이 아니라 의미적 반복이므로, 임계를 낮추면 오탐만 늘고 진짜는 못 잡는다.
+//
+// 무력한 게이트는 "통과"를 "결함 없음"으로 잘못 읽히게 만들기 때문에 제거했다.
+// 이 두 축의 유일한 유효 계측기는 블라인드 감사 라운드다
+// (tools/blind.mjs → 외부 풀이자 → tools/grade-blind.mjs). AUTHORING.md §6.2 참조.
+// 문항을 추가·수정한 뒤에는 이 게이트가 녹색이어도 블라인드 감사를 다시 돌려야 한다.
+
+const errors = []
+const warnings = []
+const err = (id, msg) => errors.push({ id, msg })
+const warn = (id, msg) => warnings.push({ id, msg })
+
+function loadAll() {
+  if (!existsSync(QDIR)) {
+    console.error(`문항 디렉터리가 없습니다: ${QDIR}`)
+    process.exit(2)
+  }
+  const files = readdirSync(QDIR).filter((f) => f.endsWith('.json'))
+  const out = []
+  for (const f of files) {
+    const path = join(QDIR, f)
+    let parsed
+    try {
+      parsed = JSON.parse(readFileSync(path, 'utf8'))
+    } catch (e) {
+      err(f, `JSON 파싱 실패: ${e.message}`)
+      continue
+    }
+    if (!Array.isArray(parsed)) {
+      err(f, '최상위는 문항 배열이어야 합니다')
+      continue
+    }
+    parsed.forEach((q, i) => out.push({ ...q, __file: f, __index: i }))
+  }
+  return out
+}
+
+function checkQuestion(q) {
+  const id = q.id || `${q.__file}#${q.__index}`
+
+  // ── §1 불변식 ────────────────────────────────────────────────
+  if (!q.id) err(id, 'id 누락')
+  if (!q.topic) err(id, 'topic 누락')
+  else if (!TOPICS.includes(q.topic)) err(id, `topic이 허용값이 아님: ${q.topic}`)
+  if (!q.question || q.question.trim().length < 10) err(id, '발문이 없거나 너무 짧음')
+  if (typeof q.difficulty !== 'number' || q.difficulty < 1 || q.difficulty > 3)
+    err(id, 'difficulty는 1~3 정수여야 함')
+  if (!q.explanation || q.explanation.trim().length < 30)
+    err(id, 'explanation이 없거나 너무 짧음(30자 이상)')
+  if (!q.source || !q.source.trim()) err(id, 'source 누락 — 검증 가능한 근거가 필요함')
+
+  const opts = q.options
+  if (!Array.isArray(opts) || opts.length !== 4) {
+    err(id, `options는 정확히 4개여야 함 (현재 ${Array.isArray(opts) ? opts.length : '없음'})`)
+    return
+  }
+
+  const correct = opts.filter((o) => o.correct === true)
+  if (correct.length !== 1) err(id, `정답은 정확히 1개여야 함 (현재 ${correct.length}개)`)
+
+  const wrong = opts.filter((o) => !o.correct)
+  for (const [i, o] of opts.entries()) {
+    if (!o.text || !o.text.trim()) err(id, `보기 ${i}: text 누락`)
+    // §2.3 핵심 게이트 — 모든 보기에 why가 있어야 한다
+    if (!o.why || o.why.trim().length < 5)
+      err(id, `보기 ${i}: why 누락 — "이 보기를 고른 사람은 무엇을 오해했는가"를 쓸 수 없으면 버려야 함`)
+    if (!o.correct) {
+      if (!o.distractorType) err(id, `보기 ${i}: distractorType 누락`)
+      else if (!DISTRACTOR_TYPES.includes(o.distractorType))
+        err(id, `보기 ${i}: distractorType이 허용값이 아님: ${o.distractorType}`)
+    }
+    // §3-2 금지 보기
+    if (o.text && BANNED_OPTION_PATTERNS.some((re) => re.test(o.text)))
+      err(id, `보기 ${i}: 금지된 보기 형태("위의 모든 것"류)`)
+  }
+
+  // §2.2 오답 유형 다양성 — 3개가 전부 같은 타입이면 안 됨
+  const types = new Set(wrong.map((o) => o.distractorType).filter(Boolean))
+  if (wrong.length === 3 && types.size < 2)
+    err(id, `오답 3개의 distractorType이 ${types.size}종뿐 — 최소 2종을 섞어야 함`)
+
+  // §3-1 길이 편향
+  if (correct.length === 1 && wrong.length === 3) {
+    const cLen = correct[0].text.length
+    const wAvg = wrong.reduce((s, o) => s + o.text.length, 0) / wrong.length
+    if (wAvg > 0 && cLen / wAvg > LENGTH_RATIO_MAX)
+      err(id, `길이 편향: 정답 ${cLen}자 / 오답 평균 ${wAvg.toFixed(1)}자 = ${(cLen / wAvg).toFixed(2)}배 (상한 ${LENGTH_RATIO_MAX})`)
+  }
+
+  // §3-4 절대 표현이 오답에만 몰리는지
+  const hasAbs = (t) => ABSOLUTE_WORDS.some((w) => t.includes(w))
+  const wrongAbs = wrong.filter((o) => hasAbs(o.text || '')).length
+  const correctAbs = correct.length === 1 && hasAbs(correct[0].text || '')
+  if (wrongAbs >= 2 && !correctAbs)
+    warn(id, `절대 표현("항상/모든/반드시"류)이 오답 ${wrongAbs}개에만 있음 — 단어만 보고 소거 가능`)
+
+  // §3-3 문법 단서 — 보기 어미가 정답만 다른 경우
+  const tail = (t) => (t || '').trim().slice(-2)
+  const tails = opts.map((o) => tail(o.text))
+  if (correct.length === 1) {
+    const cTail = tail(correct[0].text)
+    const sameAsCorrect = tails.filter((t) => t === cTail).length
+    if (sameAsCorrect === 1 && new Set(wrong.map((o) => tail(o.text))).size === 1)
+      warn(id, `문법 단서 의심: 오답 3개의 어미가 동일하고 정답만 다름("${cTail}")`)
+  }
+
+  // §3-7 복합 질문
+  if (q.question && (q.question.match(/\?/g) || []).length > 1)
+    warn(id, '발문에 물음표가 2개 이상 — 한 문항에 두 가지를 묻고 있지 않은지 확인')
+
+  if (correct.length !== 1 || wrong.length !== 3) return
+
+  // §3-9 발문이 결함을 전제하는데 그 전제를 부정하는 오답 — 읽자마자 소거되는 죽은 보기
+  const premisesDefect = PREMISE_DEFECT_PATTERNS.some((re) => re.test(q.question || ''))
+  if (premisesDefect) {
+    for (const [i, o] of opts.entries()) {
+      if (o.correct) continue
+      if (PREMISE_DENIAL_PATTERNS.some((re) => re.test(o.text || '')))
+        err(id, `보기 ${i}: 발문이 결함을 전제하는데 이 보기는 그 전제를 부정함 — 읽자마자 소거되는 죽은 보기 ("${o.text.slice(0, 40)}…")`)
+    }
+  }
+
+}
+
+function checkGlobal(qs) {
+  // id 유일성
+  const seen = new Map()
+  for (const q of qs) {
+    if (!q.id) continue
+    if (seen.has(q.id)) err(q.id, `id 중복 (${seen.get(q.id)} 와 ${q.__file})`)
+    else seen.set(q.id, q.__file)
+  }
+
+  // 발문 중복
+  const norm = (s) => (s || '').replace(/\s+/g, '').toLowerCase()
+  const byQ = new Map()
+  for (const q of qs) {
+    const k = norm(q.question)
+    if (!k) continue
+    if (byQ.has(k)) warn(q.id, `발문이 ${byQ.get(k)} 와 동일`)
+    else byQ.set(k, q.id)
+  }
+
+  // §3-6 부정형 발문 비율
+  const neg = qs.filter((q) => NEGATIVE_PATTERNS.some((re) => re.test(q.question || '')))
+  if (qs.length >= 10) {
+    const ratio = neg.length / qs.length
+    if (ratio > NEGATIVE_RATIO_MAX)
+      err('GLOBAL', `부정형 발문이 ${neg.length}/${qs.length} = ${(ratio * 100).toFixed(0)}% (상한 ${NEGATIVE_RATIO_MAX * 100}%)`)
+  }
+
+  // §3-5 정답 위치 편중 (원본 데이터 기준)
+  if (qs.length >= 20) {
+    const pos = [0, 0, 0, 0]
+    for (const q of qs) {
+      const i = (q.options || []).findIndex((o) => o.correct)
+      if (i >= 0 && i < 4) pos[i]++
+    }
+    const expected = qs.length / 4
+    const chi = pos.reduce((s, o) => s + (o - expected) ** 2 / expected, 0)
+    // df=3, p=0.01 임계 11.34
+    if (chi > 11.34)
+      warn('GLOBAL', `정답 위치 편중 (분포 ${pos.join('/')}, chi²=${chi.toFixed(2)}) — 런타임 셔플이 있지만 원본도 고르게`)
+  }
+
+  return { total: qs.length, negatives: neg.length }
+}
+
+// ── 실행 ────────────────────────────────────────────────────────
+const onlyIdx = process.argv.indexOf('--only')
+const only = onlyIdx > -1 ? process.argv[onlyIdx + 1] : null
+if (only && !TOPICS.includes(only)) {
+  console.error(`--only 값이 허용된 topic이 아닙니다: ${only} (${TOPICS.join(', ')})`)
+  process.exit(2)
+}
+
+let questions = loadAll()
+if (only) questions = questions.filter((q) => q.topic === only)
+for (const q of questions) checkQuestion(q)
+const stats = checkGlobal(questions)
+
+const byTopic = {}
+const byDiff = { 1: 0, 2: 0, 3: 0 }
+const byType = {}
+for (const q of questions) {
+  byTopic[q.topic] = (byTopic[q.topic] || 0) + 1
+  if (byDiff[q.difficulty] !== undefined) byDiff[q.difficulty]++
+  for (const o of q.options || []) if (o.distractorType) byType[o.distractorType] = (byType[o.distractorType] || 0) + 1
+}
+
+if (process.argv.includes('--json')) {
+  console.log(JSON.stringify({ stats, byTopic, byDiff, byType, errors, warnings }, null, 2))
+} else {
+  console.log(`문항 ${stats.total}건 검사`)
+  console.log(`  주제별: ${Object.entries(byTopic).map(([k, v]) => `${k} ${v}`).join(' / ') || '-'}`)
+  console.log(`  난이도: 1=${byDiff[1]} 2=${byDiff[2]} 3=${byDiff[3]}`)
+  console.log(`  오답유형: ${Object.entries(byType).map(([k, v]) => `${k} ${v}`).join(' / ') || '-'}`)
+  console.log(`  부정형 발문: ${stats.negatives}건`)
+  if (warnings.length) {
+    console.log(`\n경고 ${warnings.length}건`)
+    for (const w of warnings) console.log(`  ⚠ [${w.id}] ${w.msg}`)
+  }
+  if (errors.length) {
+    console.log(`\n실패 ${errors.length}건`)
+    for (const e of errors) console.log(`  ✗ [${e.id}] ${e.msg}`)
+    console.log('\n게이트 실패 — 위 항목을 고치기 전에는 병합하지 않는다.')
+  } else {
+    console.log('\n게이트 통과')
+  }
+}
+
+process.exit(errors.length ? 1 : 0)

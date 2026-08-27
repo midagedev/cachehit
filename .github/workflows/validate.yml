@@ -1,0 +1,25 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 문항 품질 게이트
+        run: node tools/validate.mjs
+      - name: 빌드 산출물이 최신인지 확인
+        run: |
+          node tools/build.mjs
+          if ! git diff --quiet -- data/questions.json; then
+            echo "data/questions.json 이 소스와 다릅니다. 'node tools/build.mjs' 실행 후 커밋하세요."
+            git diff --stat -- data/questions.json
+            exit 1
+          fi

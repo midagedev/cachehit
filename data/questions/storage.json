@@ -1,0 +1,498 @@
+[
+  {
+    "id": "storage-presigned-put-size-001",
+    "topic": "storage",
+    "tags": ["presigned-url", "post-policy", "upload-constraint"],
+    "difficulty": 2,
+    "question": "프로필 이미지를 presigned PUT URL로 직접 받는 서비스에서, 한 계정이 수 GB짜리 파일을 반복해 올려 사후 검증 큐와 저장 비용이 불어났다. 업로드 크기 상한을 발급 시점에 강제하려면?",
+    "options": [
+      {
+        "text": "presigned PUT의 쿼리 파라미터에 content-length-range를 추가한다",
+        "distractorType": "adjacent",
+        "why": "content-length-range는 POST policy의 조건이지 PUT presigned의 쿼리 항목이 아니다. PUT 서명에는 본문 크기를 강제하는 항목이 없다."
+      },
+      {
+        "text": "폼 업로드로 바꾸고 POST policy의 content-length-range 조건을 건다",
+        "correct": true,
+        "why": "발급 시점에 최소/최대 바이트를 강제하는 공식 수단은 POST policy의 content-length-range 조건뿐이다. PUT을 쓰려면 크기는 사후 검증의 몫이 된다."
+      },
+      {
+        "text": "발급 API가 클라이언트가 신청한 파일 크기를 먼저 검증하게 한다",
+        "distractorType": "one-step-short",
+        "why": "검사하는 값은 클라이언트의 신청값일 뿐 실제 올라오는 바이트와 무관하다는 걸 놓친다. 직접 업로드에서 서버는 내용을 못 지난다."
+      },
+      {
+        "text": "URL 만료를 1분으로 줄여 올릴 수 있는 창을 닫아버린다",
+        "distractorType": "overgeneralized",
+        "why": "만료는 언제 올릴 수 있는지만 줄일 뿐 올라오는 내용의 크기는 통제하지 못한다고 믿은 것이다."
+      }
+    ],
+    "explanation": "PUT presigned URL은 서명이 메서드, 경로, 만료 같은 요청 형태에만 붙고 본문 내용을 못 본다. 그래서 URL로 크기 상한을 강제할 수 없고, 이 조건을 담당하는 건 폼 업로드용 POST policy의 content-length-range다. PUT을 유지하면 크기 검증은 사후 파이프라인의 몫인데, 이번 사고가 보여주듯 검증이 도착하기 전에 저장 비용과 검증 큐가 먼저 소진된다. 발급 API에서 검사하는 값은 어디까지나 신청값일 뿐 실제 바이트와 무관하다. 직접 업로드의 본질적 대가가 검증의 사후화이므로, 사전 제약과 사후 검증을 세트로 설계해야 한다.",
+    "source": "AWS S3 User Guide, Browser-based uploads using POST (POST policy 조건 content-length-range)"
+  },
+  {
+    "id": "storage-upload-completion-001",
+    "topic": "storage",
+    "tags": ["event-notification", "upload-completion", "idempotency"],
+    "difficulty": 2,
+    "question": "모바일 앱이 presigned PUT으로 사진을 올리고 완료 콜백을 서버에 보낸다. 서버는 콜백을 받은 순간 DB 상태를 READY로 바꾼다. 콜백은 왔는데 객체가 없거나, 콜백은 없는데 객체가 있는 케이스가 잡혔다. 업로드 완료의 원천은?",
+    "options": [
+      {
+        "text": "콜백을 받는 즉시 서버가 객체를 HEAD로 확인한 뒤 승격한다",
+        "distractorType": "one-step-short",
+        "why": "거짓 콜백은 걸러지지만 콜백 자체가 유실되는 경로(앱 종료, 네트워크 단절)를 여전히 놓치는 반쪽 대응이라는 걸 믿은 것이다."
+      },
+      {
+        "text": "S3의 eventual consistency 때문이니 재시도로 순서를 흡수한다",
+        "distractorType": "outdated",
+        "why": "S3는 2020년 12월부터 강한 일관성이다. 원본 지연을 의심하는 건 구식 진단이고 유실의 원인은 클라이언트 경로 자체다."
+      },
+      {
+        "text": "스토리지의 객체 생성 이벤트를 완료 판단의 기준으로 삼는다",
+        "correct": true,
+        "why": "S3 이벤트 알림(ObjectCreated 계열)과 GCS OBJECT_FINALIZE가 업로드 완료를 서버에 알리는 원천이다. 콜백은 UX 힌트로만 남긴다."
+      },
+      {
+        "text": "콜백 채널을 WebSocket으로 바꾸면 유실 자체가 사라진다",
+        "distractorType": "overgeneralized",
+        "why": "앱이 죽으면 어떤 채널로도 발신이 안 된다. 문제는 채널이 아니라 발신 주체를 진실의 원천으로 삼았다는 구조라는 걸 놓쳤다."
+      }
+    ],
+    "explanation": "클라이언트 콜백은 실패하면 안 오고, 안 됐는데 왔다고 할 수도 있으며, 재시도하면 중복으로 온다. 즉 콜백은 UX 힌트는 되어도 진실의 원천이 될 수 없다. 업로드 완료의 원천은 스토리지가 스스로 알리는 이벤트다. S3는 버킷 이벤트 알림(ObjectCreated 계열)을 SQS/SNS/Lambda로, GCS는 Pub/Sub의 OBJECT_FINALIZE를 구독해 받는다. DB 상태 전이는 이 이벤트 도착으로만 일어나게 하고, 콜백은 로딩 화면을 푸는 정도로만 쓴다. 이벤트가 중복 도착하거나 순서가 섞이면 조건부 UPDATE 같은 멱등한 전이로 흡수한다.",
+    "source": "AWS S3 User Guide, Event notifications; Google Cloud Storage 문서, Pub/Sub notifications (OBJECT_FINALIZE)"
+  },
+  {
+    "id": "storage-multipart-orphan-001",
+    "topic": "storage",
+    "tags": ["multipart", "lifecycle", "cost-leak"],
+    "difficulty": 2,
+    "question": "영상 업로드에 S3 multipart를 쓰는 버킷의 저장 비용이 계속 늘어 조사했더니, CompleteMultipartUpload도 AbortMultipartUpload도 호출되지 않은 세션이 수만 건 쌓여 있었다. 재발을 막는 관례는?",
+    "options": [
+      {
+        "text": "야간 배치 잡이 버킷 전체를 리스팅해 완료 안 된 업로드를 찾아 지운다",
+        "distractorType": "overgeneralized",
+        "why": "객체 리스팅에는 진행 중인 multipart 세션이 보이지 않는다고 믿은 것이다. 세션 조회는 별도 API의 몫이라 이 청소는 성립하지 않는다."
+      },
+      {
+        "text": "버킷 버전 관리를 켜고 이전 버전 만료(NoncurrentVersionExpiration) 규칙으로 정리한다",
+        "distractorType": "adjacent",
+        "why": "NoncurrentVersionExpiration은 객체의 과거 버전에만 걸린다. 진행 중인 multipart 세션은 아직 객체가 아니어서 이 규칙이 닿지 않는다."
+      },
+      {
+        "text": "버킷에 AbortIncompleteMultipartUpload 수명주기 규칙을 건다",
+        "correct": true,
+        "why": "완료·중단되지 않은 세션을 N일 후 자동으로 버리는 lifecycle 규칙이다. 클라이언트가 못 보내는 Abort를 스토리지가 대신한다."
+      },
+      {
+        "text": "클라이언트가 업로드 실패나 취소 시 Abort를 능동적으로 호출하게 고친다",
+        "distractorType": "one-step-short",
+        "why": "정상 경로 개선은 맞지만 비정상 종료에서는 Abort 호출 자체가 못 나간다. 최후의 청소는 lifecycle이 담당해야 한다는 걸 놓쳤다."
+      }
+    ],
+    "explanation": "Complete도 Abort도 하지 않은 multipart 세션의 파트는 버킷에 남아 있는 저장물로 과금된다. 클라이언트가 비정상 종료되면 중단 요청 자체를 못 보내므로, 앱 코드의 Abort 호출만으로는 경로가 완성되지 않는다. 그래서 버킷에 AbortIncompleteMultipartUpload 수명주기 규칙(관례상 1~7일)을 거는 것이 정석이고 이는 장식이 아니라 필수 방어선이다. 참고로 객체 리스팅에는 진행 중인 업로드 세션이 보이지 않는다. 세션 조회는 별도 API의 몫이라 리스팅 기반 청소 배치는 애초에 성립하지 않는다.",
+    "source": "AWS S3 User Guide, Abort incomplete multipart uploads (lifecycle 규칙)"
+  },
+  {
+    "id": "storage-part-min-size-001",
+    "topic": "storage",
+    "tags": ["multipart", "part-size", "entity-too-small"],
+    "difficulty": 1,
+    "question": "12MB 파일을 2MB 파트 6개로 나눠 올렸더니 각 파트의 UploadPart는 성공했는데 CompleteMultipartUpload가 EntityTooSmall 오류로 실패했다. 이유는?",
+    "options": [
+      {
+        "text": "멀티파트 업로드는 파일이 100MB 이상일 때만 쓸 수 있어서다",
+        "distractorType": "plausible-number",
+        "why": "파일 크기 하한은 존재하지 않는다. 그럴듯한 숫자로 조건의 축을 객체 전체가 아니라 파트 각각에 있다는 사실을 피해 간 것이다."
+      },
+      {
+        "text": "최소 크기 제한은 마지막 파트에만 적용되기 때문이다",
+        "distractorType": "inverted",
+        "why": "규칙을 뒤집었다. 예외로 작아도 되는 게 마지막 파트고, 최소 크기는 나머지 전부에 적용된다."
+      },
+      {
+        "text": "파트 최소 크기는 버킷마다 설정하는 값인데 미지정됐다",
+        "distractorType": "plausible-number",
+        "why": "5MB 최소는 서비스의 고정 스펙이지 버킷 설정값이 아니다. 제약의 출처를 설정으로 착각한 것이다."
+      },
+      {
+        "text": "마지막 파트를 제외한 각 파트는 최소 5MB이어야 하기 때문이다",
+        "correct": true,
+        "why": "멀티파트의 크기 제약은 객체 총량이 아니라 파트 각각에 걸려 있다. 2MB 파트는 마지막 하나를 빼고 전부 위반이다."
+      }
+    ],
+    "explanation": "멀티파트의 크기 제약은 객체 전체가 아니라 파트 각각에 걸려 있다. 마지막 파트를 제외한 모든 파트는 최소 5MB여야 하며, 위반하면 UploadPart는 성공해도 완료 단계에서 EntityTooSmall로 거부된다. 그래서 2MB 파트 6개 구성은 업로드는 되고 완료가 안 되는, 몰아서 실패하는 형태를 보인다. 파트 크기는 재전송 단위이기도 해서 실무에서는 이 제약을 만족하는 선에서 실패 시 다시 보낼 비용을 기준으로 정한다.",
+    "source": "AWS S3 API Reference, CompleteMultipartUpload errors (EntityTooSmall); AWS S3 User Guide, Uploading objects using multipart upload (파트 최소 5MB, 마지막 제외)"
+  },
+  {
+    "id": "storage-resumable-s3-001",
+    "topic": "storage",
+    "tags": ["multipart", "resumable-upload", "vendor"],
+    "difficulty": 1,
+    "question": "야외에서 촬영한 영상을 올리는 앱이라 연결이 자주 끊긴다. 스토리지는 S3를 쓰기로 했는데, S3에는 GCS 같은 resumable upload가 없다는 얘기를 들었다. 끊긴 업로드를 이어 올리는 S3의 표준 수단은?",
+    "options": [
+      {
+        "text": "multipart upload, 올라간 파트는 놔두고 실패 파트만 다시 올린다",
+        "correct": true,
+        "why": "S3에서 multipart가 재개 가능 업로드를 담당한다. uploadId로 세션을 잡고 파트 단위로 이어 올린다."
+      },
+      {
+        "text": "재개가 불가능하니 연결이 끊기면 처음부터 파일을 다시 올린다",
+        "distractorType": "vendor-mixup",
+        "why": "GCS의 resumable이라는 기능명만 보고 S3에는 재개가 없다고 믿은 것이다. S3의 재개는 multipart라는 이름으로 존재한다."
+      },
+      {
+        "text": "tus 같은 재개 프로토콜 서버를 별도로 구축해 경유시켜야 한다",
+        "distractorType": "one-step-short",
+        "why": "tus는 자체 서버를 경유해야 할 때의 선택지다. 스토리지에 이미 있는 재개 수단을 두고 재발명하는 길로 샜다."
+      },
+      {
+        "text": "재시도마다 새 presigned URL로 전체 파일을 처음부터 PUT한다",
+        "distractorType": "one-step-short",
+        "why": "동작은 하지만 재전송 단위가 전체 파일이 되어 대역폭과 시간을 낭비한다. 파트 단위 재개를 포기한 설계다."
+      }
+    ],
+    "explanation": "S3에도 재개 가능 업로드가 있다. 이름이 multipart일 뿐이다. uploadId로 세션을 잡고 파트 단위로 올리므로 연결이 끊겨도 이미 올라간 파트는 그대로 두고 실패한 파트만 다시 보내면 된다. GCS의 resumable upload가 세션 URI와 오프셋 조회로 같은 문제를 푸는 것과 개념이 대응된다. 재개 기능을 자체 포맷으로 재발명하지 말고, 자체 서버를 경유해야 하는 특수한 경우에만 tus 같은 공개 프로토콜을 고려한다. 다만 끊긴 세션을 방치하면 미완료 파트가 과금되므로 수명주기 청소는 별개로 챙겨야 한다.",
+    "source": "AWS S3 User Guide, Uploading objects using multipart upload; Google Cloud Storage 문서, Resumable upload; tus 프로토콜 (tus.io)"
+  },
+  {
+    "id": "storage-consistency-cdn-001",
+    "topic": "storage",
+    "tags": ["consistency", "cdn-cache", "staleness"],
+    "difficulty": 2,
+    "question": "S3에 새 이미지를 PUT한 직후 같은 리전에서 GET하면 새 객체가 돌아온다. 그런데 CDN을 경유한 요청에는 몇 분간 옛 썸네일이 남는다. 버전 관리는 꺼져 있고 단일 리전이다. 옛 응답이 나오는 원인은?",
+    "options": [
+      {
+        "text": "S3의 eventual consistency로 원본이 늦게 반영되고 있는 것이다",
+        "distractorType": "outdated",
+        "why": "2020년 12월부터 S3는 신규 PUT에 강한 일관성을 보장한다. 원본 지연을 의심하는 건 구식 조언에 근거한 것이다."
+      },
+      {
+        "text": "CDN 캐시가 TTL이 끝나기 전 옛 응답을 내보내는 정상 동작이다",
+        "correct": true,
+        "why": "남아 있는 비일관성은 스토리지 바깥의 계층에 있다. CDN은 TTL이 끝나기 전까지 옛 응답을 내보내도록 설계되어 있다."
+      },
+      {
+        "text": "CDN이 조건부 요청을 보내면서 옛 ETag를 그대로 재사용하는 것이다",
+        "distractorType": "adjacent",
+        "why": "정책 전파는 권한 적용의 이야기고 응답 내용과는 무관한 축이다. 지연 축을 잘못 짚었다."
+      },
+      {
+        "text": "썸네일 파생물이 별도 키로 저장돼 원본 갱신이 파생물에 전파되지 않은 것이다",
+        "distractorType": "one-step-short",
+        "why": "객체 스토리지에는 부분 갱신이 없다. PUT은 통째로 교체하므로 섞임 자체가 성립하지 않는다."
+      }
+    ],
+    "explanation": "2020년 12월부터 S3의 신규 객체 생성과 삭제는 강한 일관성을 보장한다. PUT 직후 같은 리전에서 GET하면 반드시 새 객체가 돌아오므로 원본이 늦다는 진단은 이제 구식이다. 남은 비일관성은 스토리지 바깥의 계층에 있다. 대표적으로 CDN 캐시는 TTL이 끝나기 전까지 옛 응답을 내보낸다. 그래서 옛 썸네일이 보이면 원본이 아니라 캐시 전략(키 버전 교체, 무효화, TTL 설계)을 의심해야 한다. 스토리지가 일관적이라 파이프라인 전체가 일관적이라는 확장이 이런 진단을 늦게 만든다.",
+    "source": "AWS What's New, Amazon S3 now provides strong consistency (2020-12-01)"
+  },
+  {
+    "id": "storage-tiering-retrieval-001",
+    "topic": "storage",
+    "tags": ["storage-class", "retrieval-fee", "cost"],
+    "difficulty": 2,
+    "question": "표준 클래스에 두던 로그 원본을 Coldline으로 내렸다. 저장 용량과 객체 수는 전월과 같았는데 다음 달 총액이 올라 있다. 이 결과를 만들 수 있는 Coldline의 과금 특성은?",
+    "options": [
+      {
+        "text": "최소 보관 기간이 90일이라, 잔여 기간에 대한 조기 삭제 페널티가 보관 중인 달마다 부과된다",
+        "distractorType": "adjacent",
+        "why": "조기 삭제 비용은 삭제 시점에 잔여 기간만큼 한 번 청구되는 것이다. 최소 보관 기간을 구독료처럼 읽었고, 용량이 그대로인 이 버킷에는 삭제 자체가 없다."
+      },
+      {
+        "text": "조회는 무료지만 클래스를 내린 뒤로는 읽기 요청 한 건마다 수수료가 새로 붙어, 잦은 요청 파이프라인에서 총액이 커진다",
+        "distractorType": "inverted",
+        "why": "요금이 실리는 축을 뒤집었다. 조회 GB당 수수료가 존재하는 클래스에서 조회 무료는 성립하지 않는다."
+      },
+      {
+        "text": "저장 단가는 내려가지만 객체 수 기반 관리 요금이 함께 얹혀, 객체 수가 많은 버킷에서 총액이 커진다",
+        "distractorType": "adjacent",
+        "why": "객체당 관리 요금은 Autoclass를 켤 때 생기는 것이다. 클래스만 바꾼 버킷에는 이 요금이 없는데 인접 기능의 과금을 이관해 읽었다."
+      },
+      {
+        "text": "저장 단가는 내려가지만 조회되는 GB마다 수수료가 얹혀, 읽어 들이는 양이 절감분을 넘으면 총액이 커진다",
+        "correct": true,
+        "why": "싼 저장은 비싼 조회를 산다. 읽기가 계속되는 워크로드에서 조회 수수료가 저장 절감분을 넘어 역전이 일어난다."
+      }
+    ],
+    "explanation": "스토리지 클래스의 단가는 저장 한 축이 아니다. 하위 클래스일수록 저장 단가는 내려가지만 조회(GB당) 수수료가 붙고 최소 보관 기간이 생기며, 요청 단가마저 비싸진다. 읽기가 계속되는 워크로드에서는 이 조회 수수료가 저장 절감분을 쉽게 넘어서 총액이 역전된다. 최소 보관 기간의 조기 삭제 비용은 삭제 시점에 잔여 기간만큼 한 번 청구되는 것이지 보관 중에 매달 부과되지 않고, 객체당 관리 요금은 Autoclass를 켤 때의 이야기라 클래스 이관만으로는 생기지 않는다. 티어링은 접근 패턴 데이터 위에서, 가끔 읽는다가 아니라 안 읽는다를 확신할 때만 내리는 판단이다.",
+    "source": "Google Cloud Storage 문서, Storage classes and pricing (Coldline 최소 보관 90일, 조회 수수료)"
+  },
+  {
+    "id": "storage-autoclass-001",
+    "topic": "storage",
+    "tags": ["autoclass", "storage-class", "cost"],
+    "difficulty": 3,
+    "question": "혼합 접근 패턴의 원본 버킷(수십억 객체)에 GCS Autoclass를 켜서 비용이 내렸다. 이웃팀은 수억 개의 1KB 미만 아이콘을 항상 뜨겁게 읽는 버킷을 운영 중이다. 이웃팀 버킷에 Autoclass를 켜면 어떻게 되나?",
+    "options": [
+      {
+        "text": "절감액은 바이트에 비례하는데 관리 요금은 객체 수(1,000개 단위)로 붙어, 초소형 객체 다발에서는 요금이 절감분을 넘는다",
+        "correct": true,
+        "why": "절감액은 바이트에 비례하고 요금은 개수에 비례한다. 1KB 객체의 절감분은 0에 가깝지만 객체당 요금은 같아 역전된다."
+      },
+      {
+        "text": "전환이 일어나지 않는 버킷에는 요금도 붙지 않아서, 수억 개를 그대로 둬도 저장 단가 이득만 남는다",
+        "distractorType": "one-step-short",
+        "why": "관리 요금은 전환 횟수가 아니라 객체 수에 붙는다. 전환이 없어도 요금은 남고 절감만 없다는 걸 놓쳤다."
+      },
+      {
+        "text": "수억 개를 훑는 전환 판단이 자주 읽는 객체를 Nearline으로 내려, 조회 수수료와 최소 보관 기간이 계속 붙는다",
+        "distractorType": "adjacent",
+        "why": "일반 수명주기 티어링의 과금 구조를 그대로 옮겼다. Autoclass의 전환에는 조회 수수료와 최소 보관 기간이 적용되지 않는다."
+      },
+      {
+        "text": "수억 개에 요금이 얹혀도 저장 절감액이 그보다 항상 커서, 켜면 총액은 내려간다",
+        "distractorType": "overgeneralized",
+        "why": "절감은 바이트에 비례하고 요금은 개수에 비례하므로 항상 이길 수 없다. 초소형 객체에서 절감분은 0에 가깝다."
+      }
+    ],
+    "explanation": "Autoclass는 클래스 전환에 따르는 조회 수수료와 최소 보관 기간을 없애는 대신 객체당 모니터링 요금을 얹는다. 이 요금은 저장 GB가 아니라 객체 수(1,000개 단위) 기준이라, 절감액이 바이트에 비례하는 것과 방향이 어긋난다. 수억 개의 초소형 객체를 항상 뜨겁게 읽는 버킷이면 전환 자체가 일어나지 않아 절감은 없고 모니터링 요금만 남는다. 반대로 접근 패턴을 모르는 혼성 원본 저장소가 Autoclass가 가장 잘 맞는 자리다. 자동 최적화가 항상 이득인 게 아니라 과금 축을 직접 맞춰봐야 한다.",
+    "source": "Google Cloud Storage 문서, Autoclass (객체당 관리 요금, 조회 수수료 및 최소 보관 기간 미부과)"
+  },
+  {
+    "id": "storage-public-bucket-001",
+    "topic": "storage",
+    "tags": ["bucket-security", "public-access", "obfuscation"],
+    "difficulty": 1,
+    "question": "버킷을 공개 읽기로 열어두고 키를 UUID로 발급하면 못 찾을 것이라 믿고 운영하던 서비스에서 열람 사고가 났다. 올바른 진단은?",
+    "options": [
+      {
+        "text": "키 비밀성은 접근 통제가 아니며 유출, 레퍼러, 리스팅으로 키는 새게 된다",
+        "correct": true,
+        "why": "URL을 모르면 접근 못 한다는 건 보안이 아니다. 키는 새는 경로가 항상 있고 공개 버킷은 열람 사고의 1순위 원인이다."
+      },
+      {
+        "text": "키 길이가 충분히 길면 공개 상태로 둬도 사실상 인증이다",
+        "distractorType": "overgeneralized",
+        "why": "추측 어려움을 접근 통제와 동급으로 취급한 것이다. 엔트로피가 문제가 아니라 통제 축 자체가 없는 것이다."
+      },
+      {
+        "text": "추측 불가능한 UUID 키는 presigned URL과 같은 서명 기반 보호로 볼 수 있다",
+        "distractorType": "adjacent",
+        "why": "인접 메커니즘을 치환했다. presigned URL에는 서명과 만료가 붙지만 공개 버킷의 UUID 키에는 둘 다 없다. 추측 난이도는 서명이 아니다."
+      },
+      {
+        "text": "버킷 정책에서 ListBucket 권한만 막았으면 열거를 차단할 수 있었다",
+        "distractorType": "one-step-short",
+        "why": "리스팅 차단은 열거만 막는다. 이미 새어나간 키의 직접 GET은 그대로 둔다는 핵심을 빠뜨렸다."
+      }
+    ],
+    "explanation": "URL을 모르면 접근 못 한다는 건 보안이 아니다. 키는 브라우저 리퍼러, 클라이언트 로그, 공유, 리스팅 버그 같은 경로로 반드시 새고, 공개 버킷은 열람 사고의 1순위 원인으로 꼽힌다. 만료가 있는 presigned URL과의 차이는 시간 제한의 유무다. 공개 키는 무기한 무제한이다. 기본 구조는 버킷을 잠그고 서비스 주체(CDN의 OAC나 서비스 계정 같은)만 신뢰하며, 최종 사용자는 필요할 때 서명 URL로 통제하는 것이다. 실무 서비스가 이 원칙을 명시한 예로 당근 테크블로그(2019)의 PublicRead 지양과 CloudFront OAI 서술이 있다.",
+    "source": "당근 테크블로그 「AWS Lambda@Edge에서 실시간 이미지 리사이즈 & WebP 형식으로 변환」(2019); AWS S3 User Guide, Blocking public access"
+  },
+  {
+    "id": "storage-origin-access-001",
+    "topic": "storage",
+    "tags": ["cloudfront", "oac", "origin-protection"],
+    "difficulty": 2,
+    "question": "CloudFront로 S3 원본을 서빙 중이다. 버킷은 퍼블릭 접근 차단 상태고 지금까지 OAI로 원본 접근을 허용해 왔다. OAI를 OAC로 바꾸려 할 때 OAC에 대해 옳은 설명은?",
+    "options": [
+      {
+        "text": "OAI보다 오래된 방식이지만 여전히 권장되고 있다",
+        "distractorType": "outdated",
+        "why": "순서를 반대로 기억했다. OAI가 레거시이고 OAC가 2022년 도입된 후속이다."
+      },
+      {
+        "text": "OAI의 후속으로 모든 오리진 메서드와 SSE-KMS 원본을 지원한다",
+        "correct": true,
+        "why": "OAC는 OAI를 대체하는 권장 방식이다. OAI로는 접근이 제약되던 SSE-KMS 암호화 원본과 모든 오리진 메서드를 지원한다."
+      },
+      {
+        "text": "버킷을 공개로 열어두고 CloudFront가 요청을 검증하는 방식이다",
+        "distractorType": "inverted",
+        "why": "방향이 반대다. OAC는 버킷을 여는 게 아니라 CloudFront만 신뢰하게 잠그는 기능이다."
+      },
+      {
+        "text": "OAI가 하던 역할과 완전히 동일한 이름만 바뀐 기능이다",
+        "distractorType": "one-step-short",
+        "why": "지원 메서드와 KMS 원본 접근 같은 실질 차이가 있어 도입됐다. 같은 기능의 개명이 아니다."
+      }
+    ],
+    "explanation": "OAI(Origin Access Identity)는 레거시이고 2022년 도입된 OAC(Origin Access Control)가 대체 권장이다. OAC는 모든 오리진 메서드를 지원하고, OAI로는 접근이 막히던 SSE-KMS 암호화 원본까지 지원한다. 방향도 오해하면 안 된다. OAC는 버킷을 여는 게 아니라 CloudFront만 신뢰하게 잠그는 기능이고, 최종 사용자 통제는 서명 URL과 쿠키라는 별도 계층의 몫이다. 기존 OAI 설정도 당장 깨지지는 않지만, KMS 암호화나 PUT, POST 같은 원본 쓰기를 넓히는 순간 OAC 전환이 요구된다.",
+    "source": "AWS CloudFront 개발자 안내서, Restricting access to an Amazon S3 origin (OAC 권장, OAI 레거시)"
+  },
+  {
+    "id": "storage-sse-kms-001",
+    "topic": "storage",
+    "tags": ["sse-kms", "encryption", "cost"],
+    "difficulty": 2,
+    "question": "SSE-KMS로 암호화한 버킷을 CDN 오리진으로 쓰고 있었는데 트래픽이 늘자 KMS 요금과 스로틀 경고가 함께 뛰었다. 구조적 원인은?",
+    "options": [
+      {
+        "text": "KMS 요금은 저장 GB당 부과되므로 데이터 증가가 원인이다",
+        "distractorType": "plausible-number",
+        "why": "과금 축을 잘못 잡았다. KMS 요금은 저장량이 아니라 API 요청 횟수 기반이다."
+      },
+      {
+        "text": "키 회전이 조회마다 재암호화를 유발해 비용을 늘린 것이다",
+        "distractorType": "inverted",
+        "why": "회전은 새 쓰기에만 새 키 버전을 쓴다. 기존 객체는 구버전 키로 복호화만 할 뿐 재암호화되지 않는다."
+      },
+      {
+        "text": "객체 GET마다 KMS 복호화 요청이 따라붙는 읽기 비용 구조 때문이다",
+        "correct": true,
+        "why": "SSE-KMS는 객체를 읽을 때마다 KMS 복호화 API 호출이 발생한다. 요청당 과금과 스로틀 한도가 읽기 규모에 그대로 묶인다."
+      },
+      {
+        "text": "CDN이 새 객체를 못 담아 원본 GET이 늘었을 뿐이다",
+        "distractorType": "one-step-short",
+        "why": "원본 부하 이야기는 맞지만 GET당 복호화라는 과금 구조는 SSE-KMS 선택 자체가 만든 것이다. 원인을 캐시로 돌렸다."
+      }
+    ],
+    "explanation": "SSE-KMS는 키 통제와 감사를 주는 대신 비용 구조를 바꾼다. 객체를 읽을 때마다 KMS 복호화 API 호출이 따라붙어 요청당 과금과 스로틀 한도의 영향을 받는다. KMS 요금은 저장량이 아니라 요청 횟수 축이므로 데이터 증가라는 진단은 축 자체가 틀렸다. 키 회전도 원인이 아니다. 회전은 새 쓰기에 새 키 버전을 쓸 뿐 기존 객체는 구버전 키로 복호화만 한다. 읽기가 뜨거운 세그먼트에서는 CDN 캐시로 원본 GET을 줄이거나 grant 최적화, 세그먼트별 암호화 방식 재설계로 완화한다. 암호화 옵션 하나가 읽기 비용 구조를 바꾼다는 걸 청구서 항목 단위로 봐야 한다.",
+    "source": "AWS S3 User Guide, Protecting data using SSE-KMS; AWS KMS 개발자 안내서, 키 회전 (기존 데이터는 구버전 키로 복호화)"
+  },
+  {
+    "id": "storage-presigned-reuse-001",
+    "topic": "storage",
+    "tags": ["presigned-url", "expiry", "bearer"],
+    "difficulty": 1,
+    "question": "다운로드용 presigned URL이 커뮤니티에 공유돼 만료 전까지 누구나 파일을 받을 수 있는 사고가 났다. 재발을 줄이는 방향으로 옳은 대응은?",
+    "options": [
+      {
+        "text": "URL은 1회용이므로 이미 소진됐을 것이고 다른 경로를 의심한다",
+        "distractorType": "adjacent",
+        "why": "일회용 토큰의 관념을 그대로 옮겼다. presigned URL은 만료 전 몇 번이고 재사용된다."
+      },
+      {
+        "text": "만료를 몇 년 단위로 늘려 재발급 요청 자체를 없앤다",
+        "distractorType": "inverted",
+        "why": "완화의 반대 방향이다. 유출 시 대응 불능 기간이 그만큼 커지고, 서명 방식의 만료 상한(7일)도 존재한다."
+      },
+      {
+        "text": "목적에 맞는 짧은 만료를 걸고 필요할 때 다시 발급받게 한다",
+        "correct": true,
+        "why": "소지 기반 권한의 노출면은 만료로 줄인다. 짧은 만료와 재발급 흐름이 표준 완화 체계다."
+      },
+      {
+        "text": "발급 API가 인증된 엔드포인트이므로 URL 실행도 자격 검증을 요구한다",
+        "distractorType": "overgeneralized",
+        "why": "URL 검증은 발급자 신원이 아니라 URL과 서명의 유효성만 본다. 발급 인가와 실행 인가를 같은 층으로 뭉뚱그렸다."
+      }
+    ],
+    "explanation": "presigned URL은 만료 전까지 소지자 누구에게나 유효하고 몇 번이고 재사용된다. 1회성 토큰이 아니다. 발급 API의 인증은 누가 받았는가를 검증할 뿐, URL 실행 시점에는 서명과 만료만 검사된다. 그래서 완화는 만료를 목적에 맞게 짧게 잡고 필요할 때 재발급받게 하는 방향이고, 만료를 늘리는 건 유출 시 대응 불능 기간을 키우는 일이다. 참고로 V4 계열 서명의 만료 상한은 7일이라 어차피 몇 년짜리 발급은 불가능하다. 업로드용은 분 단위, 다운로드용은 정책에 따라 시간 단위가 관례다.",
+    "source": "AWS S3 User Guide, Share an object with a presigned URL (만료 전 소지자 접근, SigV4 최대 7일)"
+  },
+  {
+    "id": "storage-etag-checksum-001",
+    "topic": "storage",
+    "tags": ["etag", "integrity", "checksum"],
+    "difficulty": 2,
+    "question": "무결성 검증을 위해 클라이언트가 로컬 파일의 MD5를 계산해 보관하고, 업로드 후 객체의 ETag와 비교하는 로직을 넣었다. multipart로 올린 큰 파일에서만 검증이 계속 실패한다. 이유는?",
+    "options": [
+      {
+        "text": "multipart 객체의 ETag는 파트 구성으로 계산되는 별도 값이기 때문이다",
+        "correct": true,
+        "why": "단발 PUT의 ETag는 MD5지만 multipart의 ETag는 파트 수와 파트별 해시로 만든 값이다. 비교 대상이 애초에 다르다."
+      },
+      {
+        "text": "multipart 업로드에서도 ETag는 객체 전체의 MD5이므로 클라이언트 계산 로직이 틀린 것이다",
+        "distractorType": "overgeneralized",
+        "why": "단발 PUT에서만 성립하는 사실을 전체로 확장했다. 큰 파일에서만 실패하는 패턴 자체가 반례다."
+      },
+      {
+        "text": "클라이언트가 파트 경계와 다른 크기로 MD5를 계산했기 때문이다",
+        "distractorType": "adjacent",
+        "why": "단발 PUT의 검증 방식을 치환했다. 멀티파트는 파트별 검증이나 x-amz-checksum 계열을 쓴다."
+      },
+      {
+        "text": "S3가 GCS와 달리 전체 객체의 md5Hash를 별도로 저장하지 않기 때문이다",
+        "distractorType": "vendor-mixup",
+        "why": "GCS 사실 관계는 맞지만 지금 실패의 원인은 ETag 포맷이다. 벤더를 바꾸는 답이 아니라 검증 수단을 바꾸는 답이다."
+      }
+    ],
+    "explanation": "단발 PUT에서 S3의 ETag는 MD5지만 multipart 객체의 ETag는 파트 수와 파트별 해시로 만든 별도 값이다. 그래서 클라이언트 MD5와 비교하면 큰 파일에서만 늘 불일치하는 현상이 나온다. 계산 로직이 틀린 게 아니다. 검증이 필요하면 요청에 체크섬을 실어 서버가 확인하게 한다. x-amz-checksum 계열이 그 역할이다. 참고로 GCS는 모든 객체의 메타데이터에 md5Hash와 crc32c를 서버가 기본 계산해 저장하므로, 한쪽 관습을 다른 쪽으로 이식하면 동작이 어긋난다.",
+    "source": "AWS S3 User Guide, Checking object integrity (multipart ETag는 MD5가 아님); Google Cloud Storage 문서, Object metadata (md5Hash, crc32c 기본 제공)"
+  },
+  {
+    "id": "storage-ssot-orphans-001",
+    "topic": "storage",
+    "tags": ["ssot", "state-machine", "reconciliation"],
+    "difficulty": 3,
+    "question": "presigned PUT으로 올리고 메타는 DB에 두는 서비스에서, DB에는 있는데 객체가 없어 404가 나는 케이스와 객체만 있고 DB에 없는 고아가 함께 발견됐다. 수억 개 키 규모다. 이 불일치를 상시 흡수하는 구조는?",
+    "options": [
+      {
+        "text": "DB 커밋을 스토리지 PUT보다 먼저 완료해 레코드가 앞서게 한다",
+        "distractorType": "inverted",
+        "why": "그 순서가 바로 역방향 404를 양산한다. PENDING, PUT, 이벤트 확정의 순서를 뒤집은 것이다."
+      },
+      {
+        "text": "이벤트 경로를 SNS-SQS로 이중화해 유실을 막고, 야간 배치가 전체 키를 순회하며 diff로 잔해를 정리한다",
+        "distractorType": "one-step-short",
+        "why": "이중화는 유실 확률을 줄일 뿐 전달은 여전히 at-least-once라 멱등한 전이 장치가 따로 필요하고, 전체 키 순회는 상시 흡수가 아니라 수억 규모에서 비용 폭탄이다."
+      },
+      {
+        "text": "발급 시 PENDING 레코드를 남기고, 업로드가 오지 않는 레코드만 만료시켜 정리한다",
+        "distractorType": "one-step-short",
+        "why": "발급 잔해의 한 방향만 닫는다. 도착한 이벤트로 상태를 확정하는 전이와 고아 객체의 청소가 빠졌다."
+      },
+      {
+        "text": "발급 시 PENDING을 남기고 전이는 이벤트로만, 잔해는 격리 프리픽스 만료로 정리한다",
+        "correct": true,
+        "why": "원자성이 없는 두 쓰기를 상태 머신으로 묶는 표준 구조다. 미완료 상태와 고아는 만료 청소로 상시 흡수한다."
+      }
+    ],
+    "explanation": "스토리지 PUT과 DB 커밋은 분산 시스템의 두 쓰기라 원자적으로 묶을 수 없다. 기본 순서는 DB에 PENDING 레코드를 먼저 남기고, 객체가 올라오면, 스토리지 이벤트 도착으로만 상태를 확정하는 것이다. DB 커밋을 앞세우면 레코드는 있는데 객체가 없는 역방향 404를 양산한다. 이벤트 경로를 이중화해도 전달은 적어도 한 번일 뿐이므로 상태 전이는 멱등해야 한다. 발급만 하고 안 올라온 잔해와 고아 객체는 격리 프리픽스의 수명주기 만료로 상시 청소하고, 대규모 정합성 검증은 리스팅 순회 대신 인벤토리나 날짜 파티션 diff로 한다.",
+    "source": "AWS S3 User Guide, Event notifications 및 Lifecycle configurations; Google Cloud Pub/Sub 문서, 메시지 전달 보장 (at-least-once)"
+  },
+  {
+    "id": "storage-metadata-ssot-001",
+    "topic": "storage",
+    "tags": ["metadata", "ssot", "rewrite-cost"],
+    "difficulty": 3,
+    "question": "이미지의 심사 상태(검수 중, 공개, 차단)를 객체의 커스텀 메타데이터에 두자는 제안이 나왔다. 이 설계의 결함은?",
+    "options": [
+      {
+        "text": "리스팅으로 메타데이터 필터링이 가능하므로 질의 문제도 없다",
+        "distractorType": "overgeneralized",
+        "why": "리스팅은 키 조회일 뿐 메타 기반 질의가 아니다. 필터와 조인이 필요한 상태 관리에 성립하지 않는다."
+      },
+      {
+        "text": "버전 관리를 켜면 메타 변경 이력이 남아 관리가 된다",
+        "distractorType": "adjacent",
+        "why": "버전 관리는 우발 교체 방어 장치다. 리라이트 비용과 질의 불가, 이벤트 재발화는 그대로 남는다."
+      },
+      {
+        "text": "상태 전이가 자주 없는 편이면 리라이트 비용은 무시할 만하다",
+        "distractorType": "one-step-short",
+        "why": "비용만 보고 이벤트 재발화와 질의 불가를 놓쳤다. 메타 교체는 새 객체 생성이라 파이프라인이 다시 돈다."
+      },
+      {
+        "text": "갱신마다 객체 전체를 다시 써야 하고 그 메타데이터로는 질의가 불가능하다",
+        "correct": true,
+        "why": "객체 스토리지에는 부분 갱신이 없다. 메타 변경은 리라이트고, 커스텀 메타로 필터나 조인을 할 수 없다."
+      }
+    ],
+    "explanation": "객체 스토리지에는 부분 갱신이 없다. 커스텀 메타데이터 변경도 객체를 복사해 통째로 다시 쓰는 리라이트다. 심사 상태처럼 바뀌는 값에 이 비용 구조를 얹으면 갱신마다 대역폭과 요청이 발생하고, 교체는 ObjectCreated 이벤트를 다시 발화해 파이프라인까지 재가동시킨다. 버전 관리를 켜도 이 구조는 그대로고 메타데이터로는 필터나 조인 같은 질의가 불가능하다. 그래서 비즈니스 상태의 SSOT는 DB에 두고 스토리지는 바이트와 기술 메타데이터만 소유하는 분업이 정석이다. 커스텀 메타데이터는 디버깅 힌트 수준으로만 쓴다.",
+    "source": "AWS S3 API Reference, CopyObject (메타데이터 변경은 복사와 교체로 수행)"
+  },
+  {
+    "id": "storage-cas-dedup-001",
+    "topic": "storage",
+    "tags": ["content-addressing", "dedup", "garbage-collection"],
+    "difficulty": 3,
+    "question": "같은 이미지가 수만 명에게 반복 업로드되는 UGC 서비스에서 원본 키를 콘텐츠 해시(SHA-256)로 잡자는 제안이 나왔다. 이 설계가 반드시 함께 가져야 할 것은?",
+    "options": [
+      {
+        "text": "해시 키 자체가 접근 통제가 되므로 서명 URL 발급 검사는 생략한다",
+        "distractorType": "one-step-short",
+        "why": "dedup의 이득만 보고 권한 모델을 놓쳤다. 키를 아는 자가 곧 접근 가능해지면 안 된다."
+      },
+      {
+        "text": "삭제는 참조 계산으로, 접근 권한은 별도 계층에서 판정한다",
+        "correct": true,
+        "why": "공유 객체의 삭제는 참조 계산이나 GC가 필요하고 권한은 키와 분리된 계층(DB와 서명 URL 발급)에서만 판정된다."
+      },
+      {
+        "text": "해시 키는 추측 불가하므로 버킷을 공개 읽기로 열어도 된다",
+        "distractorType": "overgeneralized",
+        "why": "키 비밀성을 접근 통제로 착각한 오류다. dedup는 이 문제를 해결해 주지 않는다."
+      },
+      {
+        "text": "삭제 요청이 오면 공유 객체를 즉시 지워 참조를 정리한다",
+        "distractorType": "inverted",
+        "why": "인과를 뒤집었다. 참조가 정리된 뒤에 지울 수 있는데 즉시 지우면 다른 참조자의 원본이 사라진다."
+      }
+    ],
+    "explanation": "콘텐츠 해시 키는 같은 내용을 전역에 한 번만 저장하는 dedup와, 내용이 곧 신원이라는 무결성, 불변 캐싱까지 공짜로 얻는다. 그 대가는 두 군데서 온다. 삭제는 두 명이 올린 같은 이미지를 한쪽 요청으로 지우면 안 되므로 참조 계산이나 mark-and-sweep GC가 필요해진다. 접근 권한은 키가 내용으로 정해지는 순간 별도 계층, 즉 DB의 소유자와 공개 여부에 서명 URL 발급 검사에서만 판정할 수 있다. 해시가 추측 불가하다는 이유로 버킷을 공개하는 건 키 비밀성을 통제로 착각하는 오류다. 개인정보성 콘텐츠는 dedup를 포기하는 쪽이 정직한 선택일 수 있다.",
+    "source": "Pro Git 2판, 10장 Git Internals (콘텐츠 주소 저장소와 git gc); AWS S3 User Guide, Uploading objects (같은 키 PUT은 객체 교체)"
+  }
+]
