@@ -197,8 +197,8 @@ a { color: var(--accent); }
   text-align: center;
 }
 .confidence-label { margin: 0 0 12px; font-size: .92rem; color: var(--fg-dim); }
-.confidence-btns { display: flex; gap: 10px; justify-content: center; }
-.btn-conf { min-width: 130px; }
+.confidence-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.btn-conf { min-width: 116px; }
 
 /* ── 피드백 ───────────────────────────────────────── */
 .feedback { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }

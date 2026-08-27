@@ -178,18 +178,23 @@ function grade(confidence) {
 
   $('#confidence').classList.add('hidden')
 
-  const verdict = $('#verdict')
-  if (isCorrect) {
-    verdict.dataset.r = 'ok'
-    verdict.innerHTML = confidence === 'sure'
-      ? '정답입니다'
-      : '정답입니다<small>확신이 없었다면, 해설을 한 번 더 읽어두세요.</small>'
-  } else {
-    verdict.dataset.r = 'bad'
-    verdict.innerHTML = confidence === 'sure'
-      ? '틀렸습니다<small>확신했던 문항입니다. 이런 문항이 가장 오래 기억에 남습니다.</small>'
-      : '틀렸습니다'
+  // 찍어서 맞은 것은 채점상 정답이지만 아는 것이 아니다. 맞았다는 표시 때문에 그냥
+  // 넘기기 가장 쉬운 문항이라, 여기서 한 번 더 붙잡는다.
+  const VERDICT = {
+    ok: {
+      sure: '정답입니다',
+      unsure: '정답입니다<small>확신이 없었다면, 해설을 한 번 더 읽어두세요.</small>',
+      guess: '정답입니다<small>다만 찍어서 맞았습니다. 지금 해설을 읽지 않으면 다음에는 틀립니다.</small>',
+    },
+    bad: {
+      sure: '틀렸습니다<small>확신했던 문항입니다. 이런 문항이 가장 오래 기억에 남습니다.</small>',
+      unsure: '틀렸습니다',
+      guess: '틀렸습니다<small>모르는 자리를 찾았습니다. 찍은 것을 정직하게 눌러 두면 결과에서 따로 모아 드립니다.</small>',
+    },
   }
+  const verdict = $('#verdict')
+  verdict.dataset.r = isCorrect ? 'ok' : 'bad'
+  verdict.innerHTML = VERDICT[isCorrect ? 'ok' : 'bad'][confidence]
 
   const yours = $('#why-yours')
   if (!isCorrect) {
@@ -218,15 +223,29 @@ function next() {
 }
 
 /* ── 결과 ──────────────────────────────────────────── */
+
+// 재도전 대상. 틀린 것만 다시 푸는 것으로는 부족하다 — 찍어서 맞은 문항은 채점이
+// 정답이라 복습에서 조용히 빠지는데, 실제로 모르는 자리라는 점에서는 오답과 같다.
+function weakAnswers() {
+  return state.answers.filter((a) => !a.correct || a.confidence === 'guess')
+}
+
 function renderResult() {
   const total = state.answers.length
   const hits = state.answers.filter((a) => a.correct).length
   const rate = Math.round((hits / total) * 100)
   const g = gradeFor(rate)
 
+  // 찍어서 맞은 것을 뺀 점수. 등급은 히트율로 매기고 이 숫자는 나란히 보여준다 —
+  // 등급까지 두 개로 만들면 무엇이 자기 점수인지 알 수 없어진다.
+  const lucky = state.answers.filter((a) => a.correct && a.confidence === 'guess').length
+  const solidRate = Math.round(((hits - lucky) / total) * 100)
+
   $('#result-rate').innerHTML = `${rate}<span>%</span>`
   $('#result-grade').textContent = g.name
-  $('#result-line').textContent = `${total}문항 중 ${hits}문항 — ${g.line}`
+  $('#result-line').textContent = lucky
+    ? `${total}문항 중 ${hits}문항 — 찍어서 맞은 ${lucky}문항을 빼면 ${solidRate}% · ${g.line}`
+    : `${total}문항 중 ${hits}문항 — ${g.line}`
 
   // 이전 최고 기록 (재도전 라운드는 기록하지 않는다)
   if (!state.isRetry) {
@@ -269,6 +288,18 @@ function renderResult() {
     hb.classList.add('hidden')
   }
 
+  // 찍어서 맞은 문항 — 맞았다는 표시에 가려 복습에서 빠지는 자리
+  const guessed = state.answers.filter((a) => a.correct && a.confidence === 'guess')
+  const gb = $('#guess-block')
+  if (guessed.length) {
+    $('#guess-list').innerHTML = guessed
+      .map((a) => `<li>${escapeHtml(a.q.question)}</li>`)
+      .join('')
+    gb.classList.remove('hidden')
+  } else {
+    gb.classList.add('hidden')
+  }
+
   // 전체 복습
   $('#review-list').innerHTML = state.answers
     .map((a) => {
@@ -279,20 +310,26 @@ function renderResult() {
     })
     .join('')
 
-  const wrong = state.answers.filter((a) => !a.correct)
-  $('#btn-retry-wrong').classList.toggle('hidden', wrong.length === 0)
+  const weak = weakAnswers()
+  const retry = $('#btn-retry-wrong')
+  retry.classList.toggle('hidden', weak.length === 0)
+  retry.textContent = guessed.length
+    ? `틀린 문항과 찍은 문항 ${weak.length}개 다시 풀기`
+    : `틀린 문항 ${weak.length}개 다시 풀기`
 
-  const text = `나의 캐시 히트율은 ${rate}% — ${g.name}\nCDN·이미지·동영상 서빙 퀴즈`
+  const text = lucky
+    ? `나의 캐시 히트율은 ${rate}% — ${g.name}\n찍어서 맞은 걸 빼면 ${solidRate}%\nCDN·이미지·동영상 서빙 퀴즈`
+    : `나의 캐시 히트율은 ${rate}% — ${g.name}\nCDN·이미지·동영상 서빙 퀴즈`
   $('#btn-tweet').href =
     `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(SITE_URL)}`
 
-  state._last = { rate, grade: g, hits, total, byTopic }
+  state._last = { rate, grade: g, hits, total, byTopic, lucky, solidRate }
   show('#screen-result')
 }
 
 /* ── 결과 카드 PNG ─────────────────────────────────── */
 function drawCard() {
-  const { rate, grade: g, hits, total, byTopic } = state._last
+  const { rate, grade: g, hits, total, byTopic, lucky, solidRate } = state._last
   const c = $('#card-canvas')
   const x = c.getContext('2d')
   const W = c.width, H = c.height
@@ -329,7 +366,9 @@ function drawCard() {
 
   x.fillStyle = '#6f7787'
   x.font = `400 28px ${F}`
-  x.fillText(`${total}문항 중 ${hits}문항 정답`, 80, 500)
+  x.fillText(lucky
+    ? `${total}문항 중 ${hits}문항 정답 · 찍은 것 빼면 ${solidRate}%`
+    : `${total}문항 중 ${hits}문항 정답`, 80, 500)
 
   // 영역별 미니 바
   let by = 190
@@ -379,10 +418,10 @@ $('#btn-restart').addEventListener('click', () => {
   show('#screen-intro')
 })
 $('#btn-retry-wrong').addEventListener('click', () => {
-  const wrong = state.answers.filter((a) => !a.correct).map((a) => a.q)
-  if (!wrong.length) return
+  const weak = weakAnswers().map((a) => a.q)
+  if (!weak.length) return
   state.isRetry = true
-  startRound(shuffle(wrong))
+  startRound(shuffle(weak))
 })
 
 // 키보드: 1~4로 보기 선택, Enter로 다음
@@ -395,6 +434,7 @@ document.addEventListener('keydown', (e) => {
   if (!$('#confidence').classList.contains('hidden')) {
     if (e.key === 'y' || e.key === '1') grade('sure')
     if (e.key === 'n' || e.key === '2') grade('unsure')
+    if (e.key === '?' || e.key === '3') grade('guess')
     return
   }
   const n = Number(e.key)
