@@ -818,19 +818,19 @@
         "why": "재검증 상한이 엣지에만 닿는다. 브라우저의 stale 사용 정책은 규격상 그대로 남는다."
       },
       {
-        "text": "must-revalidate — 이름 그대로 모든 캐시에 재검증을 강제하는 상한이다",
+        "text": "must-revalidate — 공유 캐시에만 걸리는 상한이라 브라우저의 stale 사용은 남는다",
         "distractorType": "adjacent",
-        "why": "must-revalidate는 브라우저에도 걸리므로 끊긴 동안의 낡은 캐시 사용까지 막는다. 요구의 절반과 충돌한다."
+        "why": "must-revalidate는 계층을 가리지 않는다. 공유 캐시 한정판인 proxy-revalidate가 따로 있는 이유가 그 차이다."
       },
       {
-        "text": "no-cache — 브라우저는 재검증으로, 공유 캐시는 자율에 맡겨 나뉜다",
+        "text": "no-cache — 만료 후에만 재검증을 요구하므로 신선한 동안의 엣지 히트는 남는다",
         "distractorType": "inverted",
-        "why": "방향을 뒤집었다. no-cache는 계층을 가리지 않고 모든 캐시에 재사용 전 재검증을 요구한다."
+        "why": "no-cache는 만료 여부와 무관하게 재사용 전 재검증을 요구한다. 신선한 동안의 히트가 남지 않는다."
       },
       {
-        "text": "s-maxage=0 — 엣지의 신선 기간을 상시 만료로 만들어 재검증만 남긴다",
+        "text": "s-maxage=0 — 공유 캐시의 만료 후 재검증만 강제하고 신선 기간은 max-age가 정한다",
         "distractorType": "one-step-short",
-        "why": "엣지 stale은 막히지만 신선 기간 자체가 사라져 매 요청이 오리진 검증이 된다. 요구는 수명 제거가 아니다."
+        "why": "s-maxage=0은 공유 캐시의 신선 기간을 0으로 만든다. s-maxage가 있으면 max-age는 공유 캐시에 닿지 않는다."
       }
     ],
     "explanation": "proxy-revalidate는 must-revalidate의 공유 캐시 한정판이다. 만료 후 재검증 강제가 엣지에만 닿아서, 브라우저의 오프라인 재사용이나 이동 사이의 관대한 stale 사용은 그대로 남는다. 이런 계층 비대칭 요구는 실제로 자주 나온다 — 가격이나 재고처럼 엣지가 엄격해야 하는 축과 사용자의 최근 화면처럼 느긋해도 되는 축이 같은 서비스 안에 공존한다. s-maxage=0도 엣지 stale을 막지만 신선 기간을 희생하므로 오리진 검증이 매 요청으로 늘어나는 반대 극단이다.",
@@ -903,7 +903,7 @@
     "topic": "caching",
     "tags": ["heuristic-freshness", "last-modified", "stale-copy"],
     "difficulty": 3,
-    "question": "1년째 수정이 없던 안내 페이지에 문구를 하나 고쳤다. 이 페이지에는 원래 캐시 관련 헤더가 전혀 없다. 배포 2주 뒤에도 일부 사용자에게 옛 문구가 나오고 있다. 가장 그럴듯한 설명은?",
+    "question": "1년째 수정이 없던 안내 페이지에 문구를 하나 고쳤다. 이 페이지에는 Cache-Control·Expires가 없고 Last-Modified만 내려온다. 배포 2주 뒤에도 일부 사용자에게 옛 문구가 나오고 있다. 가장 그럴듯한 설명은?",
     "options": [
       {
         "text": "옛 사본은 배포 전 Last-Modified 기준의 휴리스틱 수명을 안고 있어 아직 신선하다",
@@ -911,7 +911,7 @@
         "why": "명시 신선도가 없으면 캐시가 수정 이력 구간의 비율로 수명을 추정한다. 1년짜리 이력이면 수 주짜리 수명이 나온다."
       },
       {
-        "text": "헤더 없는 응답에는 CDN이 고정 기본 TTL을 부여하는데 그 값이 길게 잡혀 있다",
+        "text": "신선도 지시가 없는 응답에는 CDN이 Last-Modified와 무관한 고정 기본 TTL을 부여하는데 그 값이 길게 잡혀 있다",
         "distractorType": "plausible-number",
         "why": "기본 TTL을 두는 제품도 있지만 그 값은 대개 시간 단위고 수정 이력과 무관하다. 2주짜리 창을 설명하지 못한다."
       },
