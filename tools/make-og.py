@@ -51,7 +51,7 @@ y = 92
 # 로고 라인
 d.text((PAD, y), 'cachehit', font=font(34, 'Bold'), fill=ACCENT)
 lw = d.textlength('cachehit', font=font(34, 'Bold'))
-d.text((PAD + lw + 18, y + 10), 'github.io', font=font(22, 'Regular'), fill=FG_FAINT)
+d.text((PAD + lw + 18, y + 10), 'pages.dev', font=font(22, 'Regular'), fill=FG_FAINT)
 
 # 제목
 y += 82
@@ -99,7 +99,7 @@ d.line([0, BAR_Y, W, BAR_Y], fill=LINE, width=2)
 n = question_count()
 left = f'{n}문항 · 4지선다 · 확신도 입력 · 즉시 해설' if n else '4지선다 · 확신도 입력 · 즉시 해설'
 d.text((PAD, BAR_Y + 30), left, font=font(25, 'Medium'), fill=FG_DIM)
-right = 'midagedev.github.io/cachehit'
+right = 'cachehit.pages.dev'
 rw = d.textlength(right, font=font(25, 'SemiBold'))
 d.text((W - PAD - rw, BAR_Y + 30), right, font=font(25, 'SemiBold'), fill=OK)
 
