@@ -21,7 +21,7 @@ const TOPIC_LABEL = {
 }
 
 const GRADES = [
-  { min: 90, name: 'ORIGIN SHIELD', line: '오리진까지 갈 일이 거의 없군요. 이 정도면 설계를 맡깁니다.' },
+  { min: 90, name: 'ORIGIN SHIELD', line: '오리진까지 갈 일이 거의 없군요. 이 정도면 설계를 맡겨도 되겠습니다.' },
   { min: 75, name: 'CACHE HIT', line: '대부분 엣지에서 끝냅니다. 실무에서 바로 통하는 수준이에요.' },
   { min: 55, name: 'STALE WHILE REVALIDATE', line: '일단 응답은 나갑니다. 뒤에서 조용히 갱신할 부분이 남았네요.' },
   { min: 35, name: 'TTL EXPIRED', line: '알던 것들이 조금씩 만료됐습니다. 재검증할 때가 됐어요.' },
@@ -224,7 +224,7 @@ function grade(confidence) {
     bad: {
       sure: '틀렸습니다<small>확신했던 문항입니다. 이런 문항이 가장 오래 기억에 남습니다.</small>',
       unsure: '틀렸습니다',
-      guess: '틀렸습니다<small>모르는 자리를 찾았습니다. 찍은 것을 정직하게 눌러 두면 결과에서 따로 모아 드립니다.</small>',
+      guess: '틀렸습니다<small>모르는 부분을 하나 찾았습니다. 찍었다고 정직하게 표시해 두면 결과에서 따로 모아 드립니다.</small>',
     },
   }
   const verdict = $('#verdict')
@@ -339,8 +339,8 @@ function renderResult() {
   $('#result-rate').innerHTML = `${rate}<span>%</span>`
   $('#result-grade').textContent = g.name
   $('#result-line').textContent = lucky
-    ? `${total}문항 중 ${hits}문항 — 찍어서 맞은 ${lucky}문항을 빼면 ${solidRate}% · ${g.line}`
-    : `${total}문항 중 ${hits}문항 — ${g.line}`
+    ? `${total}문항 중 ${hits}문항을 맞혔습니다. 찍어서 맞은 ${lucky}문항을 빼면 ${solidRate}%입니다. ${g.line}`
+    : `${total}문항 중 ${hits}문항을 맞혔습니다. ${g.line}`
 
   // 이전 최고 기록 (재도전 라운드는 기록하지 않는다)
   if (!state.isRetry) {
@@ -413,8 +413,8 @@ function renderResult() {
     : `틀린 문항 ${weak.length}개 다시 풀기`
 
   const text = lucky
-    ? `나의 캐시 히트율은 ${rate}% — ${g.name}\n찍어서 맞은 걸 빼면 ${solidRate}%\nCDN·이미지·동영상 서빙 퀴즈`
-    : `나의 캐시 히트율은 ${rate}% — ${g.name}\nCDN·이미지·동영상 서빙 퀴즈`
+    ? `나의 캐시 히트율은 ${rate}% (${g.name})\n찍어서 맞은 것을 빼면 ${solidRate}%\nCDN·이미지·동영상 서빙 퀴즈`
+    : `나의 캐시 히트율은 ${rate}% (${g.name})\nCDN·이미지·동영상 서빙 퀴즈`
   $('#btn-tweet').href =
     `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(SITE_URL)}`
 
@@ -462,7 +462,7 @@ function drawCard() {
   x.fillStyle = '#6f7787'
   x.font = `400 28px ${F}`
   x.fillText(lucky
-    ? `${total}문항 중 ${hits}문항 정답 · 찍은 것 빼면 ${solidRate}%`
+    ? `${total}문항 중 ${hits}문항 정답 · 찍은 것을 빼면 ${solidRate}%`
     : `${total}문항 중 ${hits}문항 정답`, 80, 500)
 
   // 영역별 미니 바
