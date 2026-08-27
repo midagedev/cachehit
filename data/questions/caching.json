@@ -152,7 +152,7 @@
       }
     ],
     "explanation": "협상 자체가 나쁜 게 아니라 협상 축의 카디널리티가 문제다. Accept는 값의 종류가 사실상 무한에 가깝다. 그래서 실무에서는 세 갈래로 피한다. 서버가 지원 여부를 판단해 쿼리 파라미터로 정규화하거나(당근이 2019년에 택한 방식), 엣지에서 Accept를 webp/avif/jpeg 같은 소수 버킷으로 접거나, 클라이언트가 확장자로 명시하게 한다.",
-    "source": "RFC 9110 §12.5.1 (Vary), 당근 테크블로그 「Lambda@Edge 실시간 이미지 리사이즈」(2019)"
+    "source": "RFC 9110 §12.5.5 (Vary), 당근 테크블로그 「Lambda@Edge 실시간 이미지 리사이즈」(2019)"
   },
   {
     "id": "caching-heuristic-001",
@@ -214,7 +214,7 @@
       }
     ],
     "explanation": "이어 받은 구간과 새로 받은 구간을 합치려면 둘이 같은 바이트여야 한다. weak ETag는 의미상 같음까지만 보장하므로 If-Range는 strong ETag나 HTTP 날짜만 받고, weak가 오면 서버는 안전한 쪽으로 돌아가 전체 표현을 내준다. 이어받기 대상에는 strong 검증자를 쓰거나, 내용이 바뀌면 URL이 바뀌는 구조로 검증 수요 자체를 없애는 것이 정석이다. 바이트가 다른 조각끼리 섞이는 사고는 이 축을 흐린 채 부분 요청을 설계할 때 터진다.",
-    "source": "RFC 9110 §13.1.4 (If-Range), §8.8 (Validators)"
+    "source": "RFC 9110 §13.1.5 (If-Range), §8.8 (Validator Fields)"
   },
   {
     "id": "caching-must-revalidate-001",
@@ -245,7 +245,7 @@
       }
     ],
     "explanation": "지시자는 많이 넣는다고 겹치는 게 아니다. must-revalidate는 검증 없는 stale 재사용을 금지하는 상한선이라, 오류 때 낡은 값을 내주는 stale-if-error와는 목적이 정면으로 충돌하고 금지 쪽이 이긴다. 장애 시 무정전이 목표라면 must-revalidate를 빼야 한다. 반대로 오래된 값이 사고가 되는 결제·재고 응답이라면 must-revalidate가 맞고, 그 경우 장애 시 에러가 나가는 것을 받아들이고 다른 완충 설계를 해야 한다.",
-    "source": "RFC 9111 §5.2.2 (must-revalidate), RFC 5861 §3 (stale-if-error)"
+    "source": "RFC 9111 §5.2.2.2 (must-revalidate), RFC 5861 §4 (stale-if-error)"
   },
   {
     "id": "caching-private-001",
@@ -276,7 +276,7 @@
       }
     ],
     "explanation": "private은 '이 응답은 한 사람의 것'이라고 캐시에게 알리는 지시다. 공유 캐시 저장을 막을 뿐 암호화도 요청 주체 인가도 해주지 않는다. 기밀성은 인가와 전송 보호가 담당하고 캐시 지시는 어디에 남을 수 있는지만 정한다. 또 브라우저 캐시에는 저장되므로, 공유 디바이스의 물리적 접근까지 고려한다면 no-store를 검토해야 한다.",
-    "source": "RFC 9111 §5.2.2 (private)"
+    "source": "RFC 9111 §5.2.2.7 (private)"
   },
   {
     "id": "caching-age-freshness-001",
@@ -462,7 +462,7 @@
       }
     ],
     "explanation": "mtime 기반 ETag는 배포 시각이 서버마다 어긋나면 같은 파일에 서로 다른 값을 낸다. 엣지가 오리진 A에서 받은 ETag를 실어 재검증했는데 로드밸런서가 오리진 B로 보내면 검증은 실패하고 304 대신 200과 본문이 반복된다. 재검증 왕복 비용은 내면서 본문 절약은 0이 되는 최악의 조합이다. 해법은 내용 기반 ETag로 바꾸거나 배포 시각을 동기화하는 것, 그리고 근본적으로는 내용이 바뀌면 URL이 바뀌는 구조로 재검증 수요 자체를 없애는 것이다. inode 기반 ETag가 같은 문제로 지적되어 기본값에서 빠진 웹서버도 있다.",
-    "source": "RFC 9110 §8.8 (Validators), Apache httpd 공식 문서 (FileETag — mtime/size 구성)"
+    "source": "RFC 9110 §8.8 (Validator Fields), Apache httpd 공식 문서 (FileETag — mtime/size 구성)"
   },
   {
     "id": "caching-accept-encoding-001",
@@ -493,7 +493,7 @@
       }
     ],
     "explanation": "압축된 응답은 요청한 인코딩에 따라 바이트가 달라지므로 Vary: Accept-Encoding은 필요하고 흔한 올바른 설정이다. 문제는 Accept-Encoding 원문이 q값과 순서, 나열까지 브라우저마다 달라 사실상 유니크하다는 점이다. 지원 인코딩 집합으로 접어 키에 넣는 정규화를 CDN이 해 주는지가 히트율을 가른다. 대상 CDN의 정규화 동작을 확인하는 것이 이 설정의 마지막 단계다.",
-    "source": "RFC 9110 §12.5.1 (Vary)"
+    "source": "RFC 9110 §12.5.5 (Vary)"
   },
   {
     "id": "caching-ttl-hitrate-001",
@@ -556,5 +556,377 @@
     ],
     "explanation": "공유 캐시가 인증 문맥의 응답을 다른 사용자에게 재사용하는 일을 막으려고 표준은 Authorization이 붙은 요청의 응답을 기본 저장 금지로 둔다. 예외는 응답이 public, s-maxage, must-revalidate 중 하나를 명시할 때뿐인데, 개인화 응답에 이를 붙이면 다른 사용자에게 재사용되는 역방향 사고가 된다. 캐시 헤더가 없다고 휴리스틱이 적용될 여지도 이 저장 금지가 우선해 가로막힌다. 인가와 캐싱을 함께 쓰려면 재사용 가능한 축과 개인 축을 나누고 인가를 URL 서명이나 별도 경로로 옮기는 것이 구조적 해법이다.",
     "source": "RFC 9111 §3 (Storing Responses in Caches — Authorization 저장 규칙)"
+  },
+  {
+    "id": "caching-pragma-legacy-001",
+    "topic": "caching",
+    "tags": ["pragma", "legacy", "cache-control"],
+    "difficulty": 1,
+    "question": "레거시 대응이라는 이유로 모든 API 응답에 Cache-Control: no-cache 와 Pragma: no-cache 를 함께 실어 보내는 게 오래된 관례로 남아 있다. 접근 로그를 보면 이 트래픽에는 HTTP/1.0 클라이언트가 없다. 이중 지시의 실효는?",
+    "options": [
+      {
+        "text": "1.0 세대 프록시 장비가 언제든 끼어들 수 있으니 이중 지시가 안전장치 역할을 한다",
+        "distractorType": "outdated",
+        "why": "과거 예제 코드의 잔재다. 1.0 클라이언트가 없는 트래픽에서는 보호하려는 대상 자체가 존재하지 않는다."
+      },
+      {
+        "text": "현대 캐시는 Cache-Control을 보므로 Pragma 쪽은 사실상 읽히지 않는다",
+        "correct": true,
+        "why": "Pragma는 HTTP/1.0 캐시 하위호환용으로 남은 필드고 응답 방향 동작은 규격에 정의조차 없다. Cache-Control이 있는 한 개입할 자리가 없다."
+      },
+      {
+        "text": "두 헤더가 겹치면 캐시가 더 엄격하게 해석해 사실상 no-store와 같아진다",
+        "distractorType": "overgeneralized",
+        "why": "지시가 겹친다고 의미가 강해지지 않는다. 각 필드는 자기 규격대로 해석된다."
+      },
+      {
+        "text": "일부 CDN은 Pragma가 있으면 Cache-Control과 충돌로 간주해 아예 캐시하지 않는다",
+        "distractorType": "vendor-mixup",
+        "why": "특정 벤더의 오래된 동작을 일반 규칙처럼 믿은 것이다. 그런 충돌 규칙은 규격에 없다."
+      }
+    ],
+    "explanation": "Pragma는 요청 방향으로만 의미가 정의된 HTTP/1.0 잔재고, 응답에 실어도 동작은 구현 마음이다. Cache-Control이 자리 잡은 지금은 1.0 클라이언트가 실제로 존재하는 경로가 확인된 경우에만 남길 가치가 있다. 이중 지시의 실제 비용은 헤더 증가가 아니라 '이 헤더가 뭘 하는지'에 대한 팀의 오해가 누적되는 것이다 — no-cache와 no-store조차 섞어 쓰는 팀이라면 더 그렇다.",
+    "source": "RFC 9111 §5.4 (Pragma), MDN Web Docs (Pragma)"
+  },
+  {
+    "id": "caching-expires-maxage-001",
+    "topic": "caching",
+    "tags": ["expires", "max-age", "freshness-lifetime"],
+    "difficulty": 2,
+    "question": "오리진이 우연히 같은 응답에 Cache-Control: max-age=600 과 Expires: (지금부터 1시간 뒤) 를 함께 실어 보내고 있다. 두 값은 어긋난다. 규격을 따르는 캐시의 판정은?",
+    "options": [
+      {
+        "text": "수명은 max-age의 600초로 정해지고 Expires는 계산에 쓰이지 않는다",
+        "correct": true,
+        "why": "신선 수명 계산은 max-age를 우선하고, 그 값이 없을 때만 Expires에서 Date를 뺀 값으로 대체한다."
+      },
+      {
+        "text": "수명은 Expires로 정해지고 max-age는 보조 값으로만 남는다",
+        "distractorType": "inverted",
+        "why": "구식 헤더가 더 기본처럼 느껴져 우선순위를 뒤집은 것이다. 규격은 정반대로 정한다."
+      },
+      {
+        "text": "두 값이 어긋나면 캐시는 안전 쪽인 짧은 값으로 통일해서 쓴다",
+        "distractorType": "overgeneralized",
+        "why": "'보수적 해석'이라는 일반 직관이 규격에 없는 타협 규칙을 만들어낸 것이다. 우선순위가 정해져 있으므로 타협이 없다."
+      },
+      {
+        "text": "두 값의 중간에 해당하는 수명으로 절충된다",
+        "distractorType": "plausible-number",
+        "why": "존재하지 않는 절충 규칙이다. 수명 계산은 우선순위에 따라 한 값을 고를 뿐이다."
+      }
+    ],
+    "explanation": "신선 수명 계산의 순서는 정해져 있다 — 공유 캐시면 s-maxage, 그다음 max-age, 둘 다 없어야 Expires에서 Date를 뺀 값이 쓰인다. 이 우선순위는 실무에서 자주 걸린다. 중간 장비가 Expires만 다시 쓰는 구성은 아무 효과가 없고, 헤더를 정리할 때도 어느 쪽이 지배하는지 알아야 잘라낼 값을 고를 수 있다. '짧은 쪽이 안전'은 그럴듯하지만 규격이 아니라서, 그렇게 구현된 일부 장비와 규격 준수 캐시가 어긋나는 원인이 되기도 한다.",
+    "source": "RFC 9111 §4.2.1 (Calculating Freshness Lifetime), §5.3 (Expires)"
+  },
+  {
+    "id": "caching-inm-precedence-001",
+    "topic": "caching",
+    "tags": ["conditional-request", "if-none-match", "precedence"],
+    "difficulty": 3,
+    "question": "캐시된 문서의 재검증 요청에 If-None-Match: \"v2\" 와 If-Modified-Since: (어제 09:00) 이 함께 실렸다. 오리진의 현재 상태는 ETag \"v3\", 마지막 수정은 그저께다. 규격대로 서버가 내놓을 응답은?",
+    "options": [
+      {
+        "text": "304 — 마지막 수정 시각이 조건보다 이전이라 변경이 없었다는 조건이 성립한다",
+        "distractorType": "overgeneralized",
+        "why": "두 검증자를 병렬로 평가한다고 믿은 것이다. 규격은 검증자가 있으면 날짜 조건을 아예 보지 않는다."
+      },
+      {
+        "text": "412 — 검증자와 날짜 조건이 서로 어긋나 전제조건 실패로 응답된다",
+        "distractorType": "adjacent",
+        "why": "412는 상태 변경 메서드에서 If-Match 계열이 실패할 때의 응답이다. GET 재검증 실패의 모양새가 아니다."
+      },
+      {
+        "text": "304 — 마지막 수정 시각이 검증자보다 신뢰할 수 있는 정보라 날짜 쪽이 우선한다",
+        "distractorType": "inverted",
+        "why": "우선순위의 방향을 뒤집었다. 검증자가 있는 이상 날짜 조건은 평가에서 밀려난다."
+      },
+      {
+        "text": "200 — 검증자 불일치로 조건이 실패해 본문을 내주고, If-Modified-Since는 평가에서 빠진다",
+        "correct": true,
+        "why": "If-None-Match가 있으면 If-Modified-Since는 무시된다. 검증자 불일치가 조건 실패를 확정하므로 본문이 다시 나간다."
+      }
+    ],
+    "explanation": "조건부 검증자의 우선순위는 규격이 정한다 — If-None-Match가 있으면 If-Modified-Since는 무시된다. ETag가 우선하는 까닭은 날짜 조건이 같은 초 안의 수정을 구분 못 하는 데 비해 검증자는 그 모호함을 덮기 때문이다. 조건 실패의 응답은 메서드에 따라 갈린다. GET/HEAD 재검증이면 200 본문이 다시 가고, 상태 변경 메서드의 조건 실패는 412다. 캐시가 두 헤더를 '보험 삼아' 같이 싣는 일은 흔해서, 이 우선순위를 모르면 '수정한 적 없는데 200이 돌아온다'는 오진이 팀에 생긴다.",
+    "source": "RFC 9110 §13.1.2 (If-None-Match), §13.2.2 (Precedence of Preconditions), MDN Web Docs (If-None-Match)"
+  },
+  {
+    "id": "caching-immutable-scope-001",
+    "topic": "caching",
+    "tags": ["immutable", "versioned-url", "extension"],
+    "difficulty": 2,
+    "question": "정적 에셋에 내용 해시 파일명과 Cache-Control: max-age=31536000, immutable 을 붙였다. 리뷰에서 'immutable이니 만료 전까지 브라우저가 재검증하지 않는 게 표준으로 보장된다'는 확인 요청이 왔다. 이 진술에 대한 판단은?",
+    "options": [
+      {
+        "text": "주요 브라우저가 모두 같은 의미로 지원하므로 동작이 보장되는 셈이다",
+        "distractorType": "vendor-mixup",
+        "why": "지원 편차가 실재하는 확장을 전 브라우저 동질 지원으로 믿은 것이다. 지원하지 않는 쪽은 max-age만 따른다."
+      },
+      {
+        "text": "immutable은 표준이 아닌 확장 제안이라 동작 보장은 대상 브라우저의 지원에 달려 있다",
+        "correct": true,
+        "why": "I-D 단계의 확장이고 채택·해석에 편차가 있다. 지원하지 않는 브라우저에서는 그냥 max-age로 동작한다."
+      },
+      {
+        "text": "만료 이후에도 재검증 없이 재사용을 계속 허용하는 것이 immutable의 효과다",
+        "distractorType": "overgeneralized",
+        "why": "효과는 신선한 동안의 리로드 재검증 생략으로 한정된다. 만료 후 동작까지 바꾸지 않는다."
+      },
+      {
+        "text": "immutable을 붙이면 max-age 값과 무관하게 1년짜리 신선도가 부여된다",
+        "distractorType": "plausible-number",
+        "why": "신선 수명은 max-age가 정한다. immutable은 수명을 늘리는 지시가 아니라 재검증 습관을 줄이는 지시다."
+      }
+    ],
+    "explanation": "immutable은 RFC 트랙 밖에 있는 확장 제안이고, 효과도 한정적이다 — fresh 기간에 사용자가 리로드를 해도 재검증을 생략하게 하는 것뿐이다. 해시 파일명과 1년 max-age 조합의 설계 자체는 여전히 옳지만, '표준 보장'이라고 적어 두면 지원하지 않는 브라우저에서 기대가 어긋났을 때 원인 진단이 늦어진다. 신선 수명을 정하는 것은 어디까지나 max-age라는 점도 함께 못박아 둔다. 문서에는 '지원하는 브라우저에서 리로드 재검증을 줄여 주는 확장' 정도로 정확하게 쓰는 것이 관리 가능하다.",
+    "source": "RFC 8246 (HTTP Immutable Responses), RFC 9111 §5.2.2.1 (max-age)"
+  },
+  {
+    "id": "caching-purge-propagation-001",
+    "topic": "caching",
+    "tags": ["purge", "invalidation", "propagation"],
+    "difficulty": 2,
+    "question": "옥외 광고 소재에 긴급 수정본을 올리고 즉시 CDN purge API를 호출해 200 OK 를 받았다. 5분 뒤에도 몇몇 리전에서 이전 소재가 계속 나오고 있다. 가장 근본적인 원인은?",
+    "options": [
+      {
+        "text": "purge 승인은 접수일 뿐이고 실제 무효화는 POP 단위로 비동기 전파돼 수 분이 걸린다",
+        "correct": true,
+        "why": "성공 응답과 전파 완료는 다른 사건이다. 리전별로 남은 노출 창은 전파 지연의 정상 범위다."
+      },
+      {
+        "text": "무효화 대상 지정이 캐시 키 정규화 규칙과 어긋나 일부 URL 변형만 지워졌다",
+        "distractorType": "adjacent",
+        "why": "purge가 변형을 놓치는 실재하는 사고 유형이지만, 이 증상은 변형이 아니라 리전을 따라 남아 있다."
+      },
+      {
+        "text": "이 CDN은 200을 반환하고도 purge를 수행하지 않는 알려진 결함이 있다",
+        "distractorType": "vendor-mixup",
+        "why": "벤더 결함을 먼저 의심하는 습관이다. 접수와 전파의 분리가 정상 동작인데 결함으로 읽었다."
+      },
+      {
+        "text": "TTL이 남아 있는 객체는 purge 대상에서 제외돼 만료 시각까지 유지된다",
+        "distractorType": "inverted",
+        "why": "purge는 즉시 제거고 TTL은 제거와 무관한 신선도 축이다. 두 축을 뒤집어 붙였다."
+      }
+    ],
+    "explanation": "purge API의 성공 응답은 '접수됨'이지 '전역 완료'가 아니다. 무효화는 수백 개 POP에 비동기로 퍼지고 전파 창이 수 분 생긴다. 이 창이 사고가 되는 조직은 긴급성 있는 자원을 purge 의존 설계에 올려둔 곳이다 — 내용이 바뀌면 URL이 바뀌는 버전 체계로 옮기면 수정·롤백이 참조 전환만으로 끝나고 무효화라는 상태ful 운영 자체가 사라진다. 멀티 CDN이면 벤더마다 API·대상 단위·전파 SLA가 달라 이 창은 더 커지고 관리 지점도 N벌이 된다.",
+    "source": "AWS CloudFront·Google Cloud CDN 공식 무효화 API 문서 (전파 지연·비동기 처리)"
+  },
+  {
+    "id": "caching-range-key-001",
+    "topic": "caching",
+    "tags": ["range", "partial-content", "cache-key"],
+    "difficulty": 2,
+    "question": "대용량 파일 서빙에서 206 Partial Content 비중이 높고 엣지 히트율이 기대보다 낮다. 팀 회의에서 원인 추정이 갈리고 있다. 범위 요청에 대한 규격상 이해로 옳은 것은?",
+    "options": [
+      {
+        "text": "Range 값이 캐시 키에 들어가 요청한 범위 수만큼 엔트리가 갈라진다",
+        "distractorType": "overgeneralized",
+        "why": "쿼리 파라미터가 키에 들어가는 경험을 Range에까지 확장한 것이다. Range는 키 구성 축이 아니다."
+      },
+      {
+        "text": "206 응답은 불완전한 부분 응답이라 캐시 원칙상 저장 대상이 아니다",
+        "distractorType": "adjacent",
+        "why": "부분 응답도 저장하고 결합하도록 허용된다. 저장 불가 규칙을 잘못된 자리로 끌어왔다."
+      },
+      {
+        "text": "미스 때 오리진에 요청 범위를 그대로 프록시하는 것이 규격상 의무다",
+        "distractorType": "vendor-mixup",
+        "why": "전체를 내려받아 슬라이스할지 범위만 전달할지는 벤더 구현의 영역이다. 규격상 의무가 아니다."
+      },
+      {
+        "text": "Range는 캐시 키가 아니고, 전체 객체가 캐시돼 있으면 엣지가 범위만 잘라 206으로 낸다",
+        "correct": true,
+        "why": "키는 메서드와 요청 대상, Vary 축으로 정해진다. 범위는 저장된 응답을 내주는 방식일 뿐이다."
+      }
+    ],
+    "explanation": "히트율 저하의 원인을 206에서 찾기 전에 키 구성부터 봐야 한다. 캐시 키는 최소한 메서드와 대상 URI, 그리고 Vary가 지정한 축으로 구성되지 Range가 아니므로, 범위가 아무리 다양해도 엔트리가 갈라지지 않는다. 엣지가 미스 때 오리진을 어떻게 가져올지(전체 저장 후 슬라이스 vs 범위만 프록시)는 벤더마다 다르고, 이 차이가 대용량 파일의 오리진 부하를 좌우한다. 낮은 히트율의 진짜 후보는 같은 객체를 여러 URL로 접근하는 정규화 문제나 축출 쪽이다.",
+    "source": "RFC 9111 §2 (Overview of Cache Operation — 캐시 키 구성), AWS CloudFront 공식 문서 (Range 요청 처리)"
+  },
+  {
+    "id": "caching-vary-asterisk-001",
+    "topic": "caching",
+    "tags": ["vary", "wildcard", "uncacheable"],
+    "difficulty": 3,
+    "question": "오리진 팀이 특정 API 응답에 Vary: * 를 붙이기로 했다. 배포 직후 그 경로만 CDN 히트율이 0으로 떨어졌다. 가장 근본적인 이유는?",
+    "options": [
+      {
+        "text": "* 는 모든 요청 헤더를 키에 넣으라는 뜻이라 키가 무한히 갈라진다",
+        "distractorType": "adjacent",
+        "why": "와일드카드를 '전체 헤더 나열'로 읽은 것이다. 문제는 키 분화가 아니라 재사용 금지다."
+      },
+      {
+        "text": "요청에 실리지 않는 축까지 달라진다는 선언이라 재검증 없이는 재사용 자체가 금지된다",
+        "correct": true,
+        "why": "* 값은 어떤 후속 요청과도 변형이 일치하지 않는다. 남은 선택은 매번 재검증뿐이라 히트가 사라진다."
+      },
+      {
+        "text": "이 CDN은 Vary를 지원하지 않아 헤더를 버리고 전부 미스로 처리한다",
+        "distractorType": "vendor-mixup",
+        "why": "미지원이면 오히려 저장 응답을 재사용해 히트가 늘어난다. 관찰된 방향과 어긋나는 진단이다."
+      },
+      {
+        "text": "응답에 ETag가 없어 조건부 재검증을 못 하는 것이 직접 계기다",
+        "distractorType": "one-step-short",
+        "why": "검증자 유무는 재검증의 형태를 정할 뿐이다. 히트가 0이 된 원인은 * 선언 자체다."
+      }
+    ],
+    "explanation": "Vary의 값이 *면 '이 응답이 무엇에 따라 달라지는지 특정할 수 없다'는 선언이고, 규격상 어떤 후속 요청과도 다른 변형으로 취급된다. 그래서 캐시는 저장해도 재검증 없이는 꺼내 쓸 수 없고 그 경로는 매 요청이 검증으로 간다. 실제로 협상 축이 특정 가능하다면 헤더 이름을 명시하는 것이 맞고, 정말로 축을 특정할 수 없는 응답이라면 no-store로 정직하게 선언하는 편이 나중 로그 해석에 낫다. 히트율 0은 버그가 아니라 이 선언의 규격적 결과다.",
+    "source": "RFC 9110 §12.5.5 (Vary), MDN Web Docs (Vary)"
+  },
+  {
+    "id": "caching-vary-user-agent-001",
+    "topic": "caching",
+    "tags": ["vary", "user-agent", "cardinality", "normalization"],
+    "difficulty": 2,
+    "question": "모바일/데스크톱 마크업 차이를 서버에서 내려주기 위해 HTML 응답에 Vary: User-Agent 를 붙였다. 며칠 뒤 CDN 히트율이 한 자릿수로 떨어졌고 접근 로그의 UA 원문은 수만 종이었다. 대응의 방향으로 옳은 것은?",
+    "options": [
+      {
+        "text": "Vary에서 User-Agent를 빼고 응답 선택은 서버가 알아서 하게 둔다",
+        "distractorType": "one-step-short",
+        "why": "캐시가 다른 UA의 응답을 재사용하게 되어 잘못된 마크업이 나갈 수 있다. 원인을 고친 게 아니라 감춘 것이다."
+      },
+      {
+        "text": "TTL을 크게 올려 늘어난 각 UA 변형이라도 오래 살게 둔다",
+        "distractorType": "overgeneralized",
+        "why": "변형 수 자체는 줄지 않는다. 키 폭발을 상환할 뿐이고 변경 반영 지연까지 커진다."
+      },
+      {
+        "text": "주요 CDN은 UA를 알아서 접어 주니 현재 설정을 유지한다",
+        "distractorType": "vendor-mixup",
+        "why": "정규화 여부는 제품마다 다르고 기본 동작으로 가정할 수 없다. 확인 전의 방치는 선택지가 아니다."
+      },
+      {
+        "text": "UA를 소수 버킷으로 접어 주거나, 협상 축을 별도 URL로 분리한다",
+        "correct": true,
+        "why": "UA 원문은 사실상 요청별 유니크라 버킷 없이는 키가 폭발한다. 축을 식별 가능한 소수로 접는 것이 구조적 해법이다."
+      }
+    ],
+    "explanation": "UA 문자열은 브라우저 빌드·버전·디바이스·패치 수준까지 갈라져 사실상 무한에 가깝고, 원문이 키에 들어가면 요청 단위로 캐시가 갈라진다. 실무의 해법은 축을 접는 것이다 — 엣지에서 모바일/데스크톱 같은 소수 버킷으로 정규화하거나, m.서브도메인이나 별도 경로처럼 URL 축으로 아예 분리하는 쪽이다. Vary에서 UA를 빼는 것은 다른 UA에게 잘못된 변형을 내주는 다른 결함을 여는 것이므로 답이 아니다. 협상 결과가 두세 세트뿐이라면 버킷 수도 그만큼으로 끝난다.",
+    "source": "RFC 9110 §12.5.5 (Vary), MDN Web Docs (Browser detection using the user agent)"
+  },
+  {
+    "id": "caching-proxy-revalidate-001",
+    "topic": "caching",
+    "tags": ["proxy-revalidate", "must-revalidate", "tiering"],
+    "difficulty": 3,
+    "question": "이미지 API에서 엣지에는 만료된 응답을 절대 내주지 않으면서 신선한 동안의 엣지 히트는 그대로 두고, 브라우저는 네트워크가 끊긴 동안 자기 캐시를 계속 쓸 수 있게 하려 한다. 이 요구를 만족시키는 표준 지시는?",
+    "options": [
+      {
+        "text": "proxy-revalidate — 공유 캐시에만 만료 후 재검증을 강제한다",
+        "correct": true,
+        "why": "재검증 상한이 엣지에만 닿는다. 브라우저의 stale 사용 정책은 규격상 그대로 남는다."
+      },
+      {
+        "text": "must-revalidate — 이름 그대로 모든 캐시에 재검증을 강제하는 상한이다",
+        "distractorType": "adjacent",
+        "why": "must-revalidate는 브라우저에도 걸리므로 끊긴 동안의 낡은 캐시 사용까지 막는다. 요구의 절반과 충돌한다."
+      },
+      {
+        "text": "no-cache — 브라우저는 재검증으로, 공유 캐시는 자율에 맡겨 나뉜다",
+        "distractorType": "inverted",
+        "why": "방향을 뒤집었다. no-cache는 계층을 가리지 않고 모든 캐시에 재사용 전 재검증을 요구한다."
+      },
+      {
+        "text": "s-maxage=0 — 엣지의 신선 기간을 상시 만료로 만들어 재검증만 남긴다",
+        "distractorType": "one-step-short",
+        "why": "엣지 stale은 막히지만 신선 기간 자체가 사라져 매 요청이 오리진 검증이 된다. 요구는 수명 제거가 아니다."
+      }
+    ],
+    "explanation": "proxy-revalidate는 must-revalidate의 공유 캐시 한정판이다. 만료 후 재검증 강제가 엣지에만 닿아서, 브라우저의 오프라인 재사용이나 이동 사이의 관대한 stale 사용은 그대로 남는다. 이런 계층 비대칭 요구는 실제로 자주 나온다 — 가격이나 재고처럼 엣지가 엄격해야 하는 축과 사용자의 최근 화면처럼 느긋해도 되는 축이 같은 서비스 안에 공존한다. s-maxage=0도 엣지 stale을 막지만 신선 기간을 희생하므로 오리진 검증이 매 요청으로 늘어나는 반대 극단이다.",
+    "source": "RFC 9111 §5.2.2.8 (proxy-revalidate), §5.2.2.2 (must-revalidate)"
+  },
+  {
+    "id": "caching-collapsing-001",
+    "topic": "caching",
+    "tags": ["stampede", "request-collapsing", "origin-shield"],
+    "difficulty": 2,
+    "question": "인기 객체 하나의 TTL이 막 지났다. 같은 객체로 200건의 요청이 엣지에 거의 동시에 들어왔다. 이 CDN에는 request collapsing이 켜져 있다. 이 요청들의 운명은?",
+    "options": [
+      {
+        "text": "요청 각자가 저장된 낡은 응답을 즉시 받고 갱신은 뒤에서 진행된다",
+        "distractorType": "adjacent",
+        "why": "그것은 stale-while-revalidate의 동작이다. collapsing은 재검증 결과를 기다리게 한다."
+      },
+      {
+        "text": "만료 시각에 무작위 지터가 부여돼 재검증이 순차적으로 분산된다",
+        "distractorType": "adjacent",
+        "why": "만료 시각을 흩는 것은 TTL 지터의 동작이다. 이미 들어온 요청을 합치는 것과 다른 층이다."
+      },
+      {
+        "text": "동시 미스는 설정과 무관하게 전부 오리진으로 그대로 나간다",
+        "distractorType": "overgeneralized",
+        "why": "동시 미스를 합치는 층의 존재를 모르고 캐시를 단순 프록시로만 상상한 것이다."
+      },
+      {
+        "text": "첫 재검증이 돌아올 때까지 나머지는 엣지에서 대기했다가 같은 결과를 받는다",
+        "correct": true,
+        "why": "동시 요청이 하나로 병합되어 오리진에는 재검증 한 건만 나간다. 오리진 보호가 이 기능의 목적이다."
+      }
+    ],
+    "explanation": "스탬피드 완화책은 셋이고 각자 바꾸는 대상이 다르다 — collapsing은 동시 요청을 하나로 합치고, TTL 지터는 만료 시각을 흩으며, stale-while-revalidate는 재검증이 돌아올 동안 낡은 것을 내준다. collapsing의 대가는 첫 결과가 돌아올 때까지 뒤 요청의 지연이 늘어나는 것이다. 오리진 입장의 스파이크 높이와 사용자 입장의 꼬리 지연이 오가는 트레이드오프다. 기능 이름과 기본값은 벤더마다 다르므로(Fastly의 request collapsing, CloudFront의 Origin Shield 등) 도입 전에 우리 CDN의 동작 문서를 확인하는 것이 전제다.",
+    "source": "Fastly 공식 문서 (Request Collapsing), AWS CloudFront 공식 문서 (Origin Shield)"
+  },
+  {
+    "id": "caching-no-store-private-001",
+    "topic": "caching",
+    "tags": ["no-store", "private", "shared-cache"],
+    "difficulty": 1,
+    "question": "1회용 인증 링크를 담은 짧은 응답을 설계 중이다. 요구는 두 가지다 — 공유 캐시에 남지 않을 것, 그리고 공용 PC의 브라우저 캐시에도 남지 않을 것. Cache-Control 한 줄로 옳은 선택은?",
+    "options": [
+      {
+        "text": "private — 공유 캐시 저장만 막는다",
+        "distractorType": "one-step-short",
+        "why": "공유 캐시 저장은 막지만 브라우저 캐시에는 디스크로 남을 수 있다. 두 요구 중 하나만 만족한다."
+      },
+      {
+        "text": "no-store — 모든 캐시에서 저장을 금지한다",
+        "correct": true,
+        "why": "저장 자체를 금지하는 유일한 표준 지시다. 공유/개인 캐시 구분이 없다."
+      },
+      {
+        "text": "no-cache — 재사용 전 재검증을 강제한다",
+        "distractorType": "adjacent",
+        "why": "저장은 일어나고 재사용 전에 검증만 간다. 저장 금지와 다른 지시다."
+      },
+      {
+        "text": "private, no-cache — 저장과 재사용을 동시에 막는 조합이다",
+        "distractorType": "overgeneralized",
+        "why": "no-cache는 저장을 막지 않으므로 조합해도 브라우저에는 남는다. no-store의 효과로 승격되지 않는다."
+      }
+    ],
+    "explanation": "private은 '한 사람의 응답' 표시일 뿐 브라우저 저장을 막지 않고, no-cache는 저장 후 재검증을 조건으로 삼을 뿐이다. 어디에도 남기지 않으려면 no-store다. 다만 no-store는 캐시의 힘을 완전히 버리는 선택이므로, 매번 재검증으로 충분한 경우에는 no-cache가 304 절약을 유지하는 더 나은 균형이 될 수 있다. 설계의 첫 단계는 요구가 '재사용 금지'인지 '저장 금지'인지부터 가르는 것이다. 공용 기기의 잔존까지 걱정하는 1회용 링크라면 답은 후자다.",
+    "source": "RFC 9111 §5.2.2.5 (no-store), §5.2.2.4 (no-cache), §5.2.2.7 (private)"
+  },
+  {
+    "id": "caching-heuristic-oldcopy-001",
+    "topic": "caching",
+    "tags": ["heuristic-freshness", "last-modified", "stale-copy"],
+    "difficulty": 3,
+    "question": "1년째 수정이 없던 안내 페이지에 문구를 하나 고쳤다. 이 페이지에는 원래 캐시 관련 헤더가 전혀 없다. 배포 2주 뒤에도 일부 사용자에게 옛 문구가 나오고 있다. 가장 그럴듯한 설명은?",
+    "options": [
+      {
+        "text": "옛 사본은 배포 전 Last-Modified 기준의 휴리스틱 수명을 안고 있어 아직 신선하다",
+        "correct": true,
+        "why": "명시 신선도가 없으면 캐시가 수정 이력 구간의 비율로 수명을 추정한다. 1년짜리 이력이면 수 주짜리 수명이 나온다."
+      },
+      {
+        "text": "헤더 없는 응답에는 CDN이 고정 기본 TTL을 부여하는데 그 값이 길게 잡혀 있다",
+        "distractorType": "plausible-number",
+        "why": "기본 TTL을 두는 제품도 있지만 그 값은 대개 시간 단위고 수정 이력과 무관하다. 2주짜리 창을 설명하지 못한다."
+      },
+      {
+        "text": "응답에 검증자가 없어 재검증이 불가능하므로 캐시가 오래 재사용할 수밖에 없다",
+        "distractorType": "overgeneralized",
+        "why": "재검증 불가는 사실이지만 무한 재사용으로 이어지지 않는다. 재사용은 신선도 판정이 허용하는 만큼만이다."
+      },
+      {
+        "text": "인기 페이지라 축출되지 않고 남아 있어 계속 히트하고 있을 뿐이다",
+        "distractorType": "adjacent",
+        "why": "오래 남아 있는 것과 신선하게 재사용되는 것은 다른 축이다. 축출은 오히려 다시 받아오게 만든다."
+      }
+    ],
+    "explanation": "명시 신선도가 없으면 캐시는 휴리스틱으로 수명을 추정하고, 전통적인 기준은 Last-Modified 이후 경과 구간의 일부(10% 관행)다. 수정 이력이 1년이면 추정 수명이 수 주가 되고, 핵심은 이미 퍼진 옛 사본이 배포 전 기준의 그 긴 수명을 그대로 가진 채 남아 있다는 점이다 — 수정 반영이 밀리는 창은 여기서 온다. 근본 대책은 이력 길이에 수명을 묶지 않는 것이다. 캐시돼도 되는 페이지에는 명시 max-age를, 즉시 반영이 필요하면 no-cache로 재검증에 맡기면 추정에 의존하는 구간이 사라진다.",
+    "source": "RFC 9111 §4.2.2 (Calculating Heuristic Freshness)"
   }
 ]

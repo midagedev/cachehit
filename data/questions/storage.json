@@ -174,12 +174,12 @@
       {
         "text": "CDN이 조건부 요청을 보내면서 옛 ETag를 그대로 재사용하는 것이다",
         "distractorType": "adjacent",
-        "why": "정책 전파는 권한 적용의 이야기고 응답 내용과는 무관한 축이다. 지연 축을 잘못 짚었다."
+        "why": "재검증은 TTL 이 끝난 뒤에야 일어나는 일이고, 오리진이 새 ETag 를 주면 200 으로 갱신된다. 재검증 자체가 옛 응답을 붙잡아 두지는 않는다."
       },
       {
         "text": "CDN 캐시 키에 쿼리 파라미터가 포함돼 옛 URL이 별도로 캐시된 것이다",
         "distractorType": "adjacent",
-        "why": "객체 스토리지에는 부분 갱신이 없다. PUT은 통째로 교체하므로 섞임 자체가 성립하지 않는다."
+        "why": "쿼리 축이 갈리면 옛 URL 과 새 URL 이 별도로 캐시될 뿐이다. 여기서 옛 응답이 나오는 URL 은 새 응답이 나와야 할 그 URL 과 같다."
       }
     ],
     "explanation": "2020년 12월부터 S3의 신규 객체 생성과 삭제는 강한 일관성을 보장한다. PUT 직후 같은 리전에서 GET하면 반드시 새 객체가 돌아오므로 원본이 늦다는 진단은 이제 구식이다. 남은 비일관성은 스토리지 바깥의 계층에 있다. 대표적으로 CDN 캐시는 TTL이 끝나기 전까지 옛 응답을 내보낸다. 그래서 옛 썸네일이 보이면 원본이 아니라 캐시 전략(키 버전 교체, 무효화, TTL 설계)을 의심해야 한다. 스토리지가 일관적이라 파이프라인 전체가 일관적이라는 확장이 이런 진단을 늦게 만든다.",
@@ -276,7 +276,7 @@
       }
     ],
     "explanation": "URL을 모르면 접근 못 한다는 건 보안이 아니다. 키는 브라우저 리퍼러, 클라이언트 로그, 공유, 리스팅 버그 같은 경로로 반드시 새고, 공개 버킷은 열람 사고의 1순위 원인으로 꼽힌다. 만료가 있는 presigned URL과의 차이는 시간 제한의 유무다. 공개 키는 무기한 무제한이다. 기본 구조는 버킷을 잠그고 서비스 주체(CDN의 OAC나 서비스 계정 같은)만 신뢰하며, 최종 사용자는 필요할 때 서명 URL로 통제하는 것이다. 실무 서비스가 이 원칙을 명시한 예로 당근 테크블로그(2019)의 PublicRead 지양과 CloudFront OAI 서술이 있다.",
-    "source": "당근 테크블로그 「AWS Lambda@Edge에서 실시간 이미지 리사이즈 & WebP 형식으로 변환」(2019); AWS S3 User Guide, Blocking public access"
+    "source": "AWS S3 User Guide, Blocking public access; AWS S3 User Guide, Identity and access management"
   },
   {
     "id": "storage-origin-access-001",
@@ -287,7 +287,7 @@
     "options": [
       {
         "text": "서명 방식이 SigV2라 SSE-KMS로 암호화된 원본에는 쓸 수 없다",
-        "distractorType": "plausible-number",
+        "distractorType": "inverted",
         "why": "순서를 반대로 기억했다. OAI가 레거시이고 OAC가 2022년 도입된 후속이다."
       },
       {
@@ -494,5 +494,377 @@
     ],
     "explanation": "콘텐츠 해시 키는 같은 내용을 전역에 한 번만 저장하는 dedup와, 내용이 곧 신원이라는 무결성, 불변 캐싱까지 공짜로 얻는다. 그 대가는 두 군데서 온다. 삭제는 두 명이 올린 같은 이미지를 한쪽 요청으로 지우면 안 되므로 참조 계산이나 mark-and-sweep GC가 필요해진다. 접근 권한은 키가 내용으로 정해지는 순간 별도 계층, 즉 DB의 소유자와 공개 여부에 서명 URL 발급 검사에서만 판정할 수 있다. 해시가 추측 불가하다는 이유로 버킷을 공개하는 건 키 비밀성을 통제로 착각하는 오류다. 개인정보성 콘텐츠는 dedup를 포기하는 쪽이 정직한 선택일 수 있다.",
     "source": "Pro Git 2판, 10장 Git Internals (콘텐츠 주소 저장소와 git gc); AWS S3 User Guide, Uploading objects (같은 키 PUT은 객체 교체)"
+  },
+  {
+    "id": "storage-replication-existing-001",
+    "topic": "storage",
+    "tags": ["replication", "crr", "batch-replication"],
+    "difficulty": 2,
+    "question": "재해 대응을 위해 운영 중인 버킷에 리전 간 복제(CRR) 규칙을 새로 만들었다. 규칙은 활성 상태고 복제 실패 지표도 없다. 며칠 뒤 목적지 버킷을 봤더니 규칙 생성 이후 올라온 객체는 있지만 그전부터 있던 객체는 하나도 없다. 이유는?",
+    "options": [
+      {
+        "text": "기존 객체는 복제 대기열에 쌓여 있을 뿐이다. 대상이 수억 개라 순서대로 오는 데 시간이 걸리니 기다리면 된다",
+        "distractorType": "one-step-short",
+        "why": "기존 객체도 결국 온다고 믿은 것이다. 라이브 복제는 과거 객체를 애초에 대상에 넣지 않는다."
+      },
+      {
+        "text": "목적지 리전의 eventual consistency 때문에 객체가 아직 보이지 않는 것이다",
+        "distractorType": "outdated",
+        "why": "S3는 2020년 12월부터 신규 생성에 강한 일관성을 준다. 과거 문서의 진단을 현재 상태에 적용했다."
+      },
+      {
+        "text": "라이브 복제는 규칙 생성 이후의 쓰기만 옮긴다. 기존 객체는 배치 복제 같은 주문형 작업으로 별도 옮겨야 한다",
+        "correct": true,
+        "why": "복제 규칙은 앞으로의 쓰기에만 붙는다. 과거분은 별도 작업의 몫이다."
+      },
+      {
+        "text": "복제 시간 통제(RTC)의 SLA가 15분(99.99%)이라, 그 창을 놓친 객체는 뒤늦게 도착하는 게 정상이다",
+        "distractorType": "plausible-number",
+        "why": "실제 문서에 있는 SLA 수치를 전체 부재의 설명으로 끌어왔다. SLA는 지연의 창이지 복제 대상 범위가 아니다."
+      }
+    ],
+    "explanation": "복제 규칙이 붙는 건 규칙 생성 이후의 새 쓰기다. 그 전부터 있던 객체는 라이브 복제의 대상이 아니므로 기다려도 오지 않고, 배치 복제(S3 Batch Replication) 같은 주문형 작업으로 따로 옮겨야 한다. eventual consistency를 의심하는 건 2020년 12월 강한 일관성 전환 이전의 진단 습관이고, RTC의 15분 SLA는 지연 목표일 뿐 대상 범위와는 무관하다. 재해 대비 계획에서 복제를 켰다와 전부 옮겼다는 별개의 단계라는 걸 점검 목록에 넣어야 한다.",
+    "source": "AWS S3 User Guide, Replicating objects (라이브 복제는 신규 객체만, 기존 객체는 S3 Batch Replication)"
+  },
+  {
+    "id": "storage-replication-events-001",
+    "topic": "storage",
+    "tags": ["replication", "event-notification", "duplicate-processing"],
+    "difficulty": 3,
+    "question": "원본 버킷의 ObjectCreated 이벤트로 썸네일 파이프라인을 돌리고 있다. 재해 대비해 리전 간 복제를 켰고, 장애 때 목적지 리전에서 파이프라인을 즉시 돌리려고 목적지 버킷에도 같은 ObjectCreated 알림을 걸어 두었다. 평시에 목적지 쪽 파이프라인은 어떻게 동작하는가?",
+    "options": [
+      {
+        "text": "복제로 도착한 객체는 목적지에서 이벤트를 발화시키지 않는다. 알림은 장애 때 수동으로 켜야 움직인다",
+        "distractorType": "inverted",
+        "why": "복제 쓰기를 버킷 바깥의 이동으로 봐 새 쓰기가 아니라고 믿은 것이다. 목적지에는 ObjectCreated:Put 그대로 발화된다."
+      },
+      {
+        "text": "복제로 도착하는 객체마다 목적지 버킷의 이벤트가 발화되어, 평시에도 전 객체가 목적지 파이프라인을 돈다",
+        "correct": true,
+        "why": "복제 쓰기는 목적지 입장에서는 PUT이다. 알림 설정이 같다면 이중 처리가 평시 구조가 된다."
+      },
+      {
+        "text": "목적지 이벤트에는 복제본임을 표시하는 필드가 붙어 파이프라인에서 그 필터만 추가하면 된다",
+        "distractorType": "adjacent",
+        "why": "ObjectCreated에는 복제 표시가 없다. Replication:* 이벤트는 원본 쪽 실패, 임계 지표용이라 축이 다르다."
+      },
+      {
+        "text": "버킷의 이벤트 발화에 초당 상한이 있어 원본과 목적지가 이를 나눠 쓰다 보니 한쪽만 전달되는 날이 있다",
+        "distractorType": "plausible-number",
+        "why": "존재하지 않는 발화 상한을 상정했다. 요청 처리량의 3,500/5,500 같은 숫자를 알림에 이식한 것이다."
+      }
+    ],
+    "explanation": "복제가 목적지에 객체를 쓰는 행위도 그 버킷 입장에서는 새 객체 생성이다. 실제 이벤트 페이로드도 eventName이 ObjectCreated:Put으로 온다. 그래서 목적지에 같은 알림을 걸면 장애 때만 도는 게 아니라 평시에 전량 이중으로 돈다. ObjectCreated에는 복제본 표시 필드도 없어서 필터로 걸러낼 수 없으므로, 설계는 한쪽 버킷만 구독하거나 소비 쪽 멱등으로 이중 처리를 흡수하는 방향이어야 한다.",
+    "source": "AWS re:Post, Does S3 Object Replication trigger ObjectCreated event? (목적지 버킷 이벤트 발화); AWS S3 User Guide, Event notifications"
+  },
+  {
+    "id": "storage-event-dup-001",
+    "topic": "storage",
+    "tags": ["event-notification", "at-least-once", "idempotency"],
+    "difficulty": 2,
+    "question": "버킷 이벤트 알림을 받아 업로드를 처리하는 서버에서, 같은 업로드가 두 번 처리되어 이중 레코드가 가끔 생긴다. 알림 경로의 오류 수와 지표는 정상이고 처리 로직 자체에도 흔적은 없다. 이중 레코드의 원인은?",
+    "options": [
+      {
+        "text": "S3의 eventual consistency 때문에 같은 PUT이 이벤트로 두 번 보이는 것이다. 원본이 늦게 반영되면서 생긴 중복이다",
+        "distractorType": "outdated",
+        "why": "강한 일관성 시대의 구식 진단이다. 원본 중복이 아니라 전달 계약의 문제다."
+      },
+      {
+        "text": "GCS의 Pub/Sub 알림은 중복 없이 정확히 한 번 오는데 S3 알림만 적어도 한 번이라, 벤더 차이가 이 중복의 원인이다",
+        "distractorType": "vendor-mixup",
+        "why": "Pub/Sub 기본 전달도 적어도 한 번이다. 정확히 한 번은 구독별 옵션 기능이라 알림 기본값이 아니다."
+      },
+      {
+        "text": "알림 목적지를 표준 큐 대신 FIFO 큐로 지정하지 않아서 큐가 중복을 걸러 주지 못한다",
+        "distractorType": "adjacent",
+        "why": "S3 알림은 FIFO 큐를 목적지로 지원하지 않는다. 중복 흡수는 목적지가 아니라 소비 쪽의 몫이다."
+      },
+      {
+        "text": "알림은 적어도 한 번 전달이 계약이라 재시도 중 재전달이 정상 동작이고, 이중 레코드는 소비 쪽에서 멱등한 조건부 전이로 흡수해야 한다",
+        "correct": true,
+        "why": "중복 전달은 장애가 아니라 설계 계약이다. 이를 흡수하는 자리는 소비자다."
+      }
+    ],
+    "explanation": "이벤트 알림의 전달 계약은 적어도 한 번(at-least-once)이다. 재시도 과정에서 같은 이벤트가 두 번 올 수 있는데 이는 장애가 아니라 설계된 동작 범위라 알림 경로 지표는 정상으로 보인다. eventual consistency 진단은 2020년 12월 이전의 습관이고, Pub/Sub 같은 다른 벤더의 알림도 기본은 적어도 한 번이라 벤더를 바꿔도 풀리지 않는다. 근본 대응은 소비 쪽 멱등이다. 레코드 생성을 조건부 UPDATE로 만들면 재전달은 무해해진다.",
+    "source": "AWS S3 User Guide, Event notifications (designed to be delivered at least once); AWS Storage Blog, Manage event ordering and duplicate events with Amazon S3 Event Notifications"
+  },
+  {
+    "id": "storage-event-order-001",
+    "topic": "storage",
+    "tags": ["event-notification", "ordering", "sequencer"],
+    "difficulty": 3,
+    "question": "같은 키를 덮어쓰는 재업로드가 짧은 간격으로 두 번 일어났다. 이벤트로 업로드 메타를 갱신하는 소비자가 있는데 두 번째 이벤트가 먼저 도착해 DB에는 첫 번째 업로드의 정보가 최종 상태로 남았다. 메타는 요청 컨텍스트에만 있어 객체를 다시 읽어도 복원할 수 없다. 재발을 막으려면?",
+    "options": [
+      {
+        "text": "PUT·DELETE 이벤트의 sequencer 값으로 같은 키의 선후를 가려, 오래된 이벤트가 최신 상태를 덮어쓰지 못하게 소비 로직을 짠다",
+        "correct": true,
+        "why": "순서 보장이 없는 대신 이벤트에 순서 판정 값이 실려 온다. 흡수 장치를 소비자에 두는 게 계약상 정석이다."
+      },
+      {
+        "text": "도착한 순서가 곧 발생한 순서이므로, 마지막에 도착한 이벤트의 값을 최종 상태로 반영하도록 소비자를 고친다",
+        "distractorType": "inverted",
+        "why": "도착 순서와 발생 순서가 다를 수 있다는 사실 자체를 부정했다. 이번 사고가 바로 그 반례다."
+      },
+      {
+        "text": "알림 목적지를 SQS FIFO 큐로 바꾸면 큐가 같은 키의 메시지 순서를 알아서 보장해 이런 뒤집힘은 사라진다",
+        "distractorType": "adjacent",
+        "why": "S3 알림은 FIFO 큐를 목적지로 지원하지 않는다. 순서는 목적지가 아니라 소비 로직이 흡수한다."
+      },
+      {
+        "text": "같은 키의 이벤트는 잠시 모아 두었다가 하나만 반영하고 나머지는 버리는 방향으로 소비자를 고친다",
+        "distractorType": "overgeneralized",
+        "why": "진짜 두 번의 업로드까지 지워버린다. 중복 제거와 순서 판정은 다른 문제다."
+      }
+    ],
+    "explanation": "이벤트 알림은 발생 순서대로 도착하지 않는다. 같은 키를 짧은 간격으로 두 번 쓰면 역순으로 도착할 수 있어 도착 순서를 믿는 소비자는 옛 값으로 끝을 낸다. 이럴 때 쓰라고 PUT과 DELETE 이벤트에 sequencer 값이 실려 온다. 같은 키의 두 이벤트를 비교하면 16진수 값이 큰 쪽이 나중에 일어난 일이라 이 값으로만 최신을 판정하면 도착 순서는 더 이상 문제가 되지 않는다. FIFO 큐는 S3 알림의 목적지로 쓸 수도 없고 이벤트를 모아 하나만 반영하면 진짜 재업로드를 잃는다. 순서는 목적지가 아니라 소비자가 흡수한다.",
+    "source": "AWS S3 User Guide, Event notification message structure (sequencer, 전달 순서 미보장)"
+  },
+  {
+    "id": "storage-audit-log-001",
+    "topic": "storage",
+    "tags": ["access-logs", "audit", "cloudtrail"],
+    "difficulty": 2,
+    "question": "규정 심사를 위해 특정 버킷의 모든 객체 읽기 기록을 제출해야 한다. 서버 액세스 로그를 켜 두고 수집 대시보드를 봤더니 심사 창 안에 일부 GET이 잡히지 않아 결측으로 표시된다. 완전한 기록을 만들려면?",
+    "options": [
+      {
+        "text": "로그 버킷의 쓰기 권한과 전송 설정을 점검해 누락을 없애고, 수집기를 다시 돌린다",
+        "distractorType": "one-step-short",
+        "why": "설정이 옳으면 로그가 완전해진다고 믿은 것이다. 최선형 전달은 설정 문제가 아니라 계약이다."
+      },
+      {
+        "text": "CloudTrail 관리 이벤트를 함께 켜 두면 객체 읽기까지 같이 남으니 격차가 메워진다",
+        "distractorType": "adjacent",
+        "why": "관리 이벤트는 버킷 구성 같은 컨트롤 플레인 기록이다. 객체 레벨 GET은 데이터 이벤트의 몫이다."
+      },
+      {
+        "text": "감사 기록은 CloudTrail 데이터 이벤트로 남기고, 서버 액세스 로그는 트래픽 성향 파악 용도로만 쓴다",
+        "correct": true,
+        "why": "서버 액세스 로그는 최선형 전달이라 완전성을 보장하지 않는다. 완전성이 필요한 축은 애초에 다른 도구의 몫이다."
+      },
+      {
+        "text": "수집기가 로그 파일을 5분 단위로만 읽어 오니 폴링 주기를 조여 결측 창을 줄인다",
+        "distractorType": "plausible-number",
+        "why": "전달 지연은 수 분에서 수 시간까지 편차가 크다. 수집 주기 수치로 메울 수 있는 창이 아니다."
+      }
+    ],
+    "explanation": "서버 액세스 로그의 전달은 최선형(best-effort)이다. 대부분 수 시간 안에 오지만 더 늦을 수 있고 아예 안 오는 기록도 드물게 있으며 중복도 난다. 문서도 완전한 청구나 감사 기록용이 아니라고 못박는다. 그래서 결측은 수집기 버그가 아니라 도구의 계약이고, 규정 심사처럼 완전성이 필요한 기록은 CloudTrail 데이터 이벤트(객체 레벨)로 남긴다. 관리 이벤트는 버킷 구성 변경 같은 컨트롤 플레인 축이라 GET을 담지 않는다.",
+    "source": "AWS S3 User Guide, Amazon S3 server access logging (best-effort, 완전성 미보장); AWS S3 User Guide, Logging options for Amazon S3 (CloudTrail 권장)"
+  },
+  {
+    "id": "storage-lifecycle-small-001",
+    "topic": "storage",
+    "tags": ["lifecycle", "transition", "storage-class"],
+    "difficulty": 2,
+    "question": "64KB 로그 조각 수십억 개를 모으는 버킷에 '30일이 지나면 IA 계열로 내린다'는 수명주기 전이 규칙을 걸었다. 한 달 뒤 저장 요금은 그대로고 목적지 클래스에는 객체가 하나도 없는데 규칙 상태는 성공이다. 이유는?",
+    "options": [
+      {
+        "text": "전이는 비동기로 실행되어 물리적 이행이 규칙 날짜보다 늦어질 뿐이다. 대상이 수십억 개라 한 달로는 아직 부족하다",
+        "distractorType": "one-step-short",
+        "why": "이행 지연을 감안해도 목적지가 텅 비지는 않는다. 아예 대상이 아니라는 가능성을 못 본 것이다."
+      },
+      {
+        "text": "수명주기 전이는 기본 동작으로 128KB 미만 객체를 대상에서 제외한다. 이 버킷은 전체가 문턱 밑이라 아무 것도 내려가지 않는다",
+        "correct": true,
+        "why": "전이 규칙에는 객체 크기 문턱이 있다. 작은 객체는 정책이 성공이어도 그냥 남는다."
+      },
+      {
+        "text": "IA 클래스의 최소 보관 기간(30일)을 아직 채우지 못한 객체는 전이가 보류되고 있는 것이다",
+        "distractorType": "adjacent",
+        "why": "최소 보관 기간은 전이 이후의 과금 규칙이다. 전이 대상 선정을 막는 조건이 아니다."
+      },
+      {
+        "text": "IA 클래스는 128KB보다 작은 객체의 저장 자체를 받지 않아 S3가 전이를 보류하고 있는 것이다",
+        "distractorType": "overgeneralized",
+        "why": "전이 제외를 저장 거부로 확장했다. 직접 IA에 PUT하면 작은 객체도 저장된다."
+      }
+    ],
+    "explanation": "수명주기 전이에는 객체 크기 문턱이 있다. 기본 동작은 128KB 미만 객체를 어떤 클래스로도 전이하지 않는 것이고(2024년 9월부터 기본), 크기 필터로 명시적으로 풀 수 있다. 64KB 조각 버킷이라면 규칙이 성공 상태여도 내려갈 객체가 하나도 없다. IA가 작은 객체의 저장을 거부하는 건 아니어서 직접 PUT하면 저장되지만, IA 계열은 128KB가 최소 과금 단위라 작은 객체를 내려도 이득이 없어 전이에서 제외되는 것이다. 저장 요금이 그대로인 진짜 원인은 이 문턱이고, 최소 보관 기간은 전이 이후의 과금 규칙이라 원인이 될 수 없다.",
+    "source": "AWS S3 User Guide, Lifecycle transition general considerations (128KB 미만 객체 전이 제외 기본 동작)"
+  },
+  {
+    "id": "storage-expiry-cost-001",
+    "topic": "storage",
+    "tags": ["lifecycle", "versioning", "cost"],
+    "difficulty": 2,
+    "question": "버전 관리가 켜진 버킷의 저장 비용을 줄이려고 현재 버전 만료 규칙(30일)을 걸었다. 한 달 뒤 객체 수와 저장량은 비슷하고 요금도 그대로다. 만료가 저장량을 줄이지 못한 원인은?",
+    "options": [
+      {
+        "text": "만료가 남긴 삭제 마커가 원본 크기만큼 저장을 차지해 그만큼 계속 과금된다",
+        "distractorType": "adjacent",
+        "why": "삭제 마커는 키 이름 크기의 최소한 저장만 차지한다. 요금을 유지하는 건 마커가 아니라 남은 비현행 버전이다."
+      },
+      {
+        "text": "버전 관리가 켜져 있으면 수명주기 만료 규칙 자체가 무시되어 아무 일도 일어나지 않는 것이다",
+        "distractorType": "overgeneralized",
+        "why": "규칙은 실행된다. 다만 현재 버전을 삭제 마커로 바꿀 뿐이라 저장량이 줄지 않는 것이다."
+      },
+      {
+        "text": "만료된 버전은 90일간 비현행으로 보관되는 게 기본이라 아직 청구 창에 들어 있는 것이다",
+        "distractorType": "plausible-number",
+        "why": "비현행 버전의 자동 보관 기간은 없다. 규칙을 걸지 않으면 무기한으로 남는다."
+      },
+      {
+        "text": "만료는 현재 버전을 삭제 마커로 바꿀 뿐이고 비현행 버전이 남아 과금된다. 저장량을 줄이려면 비현행 만료를 함께 건다",
+        "correct": true,
+        "why": "현재 버전 만료는 삭제가 아니라 삭제 마커 추가다. 저장량의 실체인 비현행 버전은 별도 규칙의 몫이다."
+      }
+    ],
+    "explanation": "버전 관리 버킷에서 현재 버전 만료는 객체를 지우는 게 아니라 삭제 마커를 최신 버전으로 추가하는 일이다. 지워진 건 목록에서뿐이고 실체인 비현행 버전은 그대로 남아 요금이 계속 붙는다. 삭제 마커 자체는 키 이름 크기의 최소한 저장만 차지해 원인이 아니고, 비현행 버전의 자동 보관 기간도 없어서 방치하면 무기한이다. 저장량을 진짜로 내리려면 비현행 버전 만료(NoncurrentVersionExpiration)로 남은 버전을 정리해야 한다. 삭제와 절감은 별개의 규칙이라 세트로 설계한다.",
+    "source": "AWS S3 User Guide, Expiring object versions (비현행 버전 만료); AWS S3 User Guide, Working with delete markers (삭제 마커 저장 최소화)"
+  },
+  {
+    "id": "storage-delete-marker-001",
+    "topic": "storage",
+    "tags": ["versioning", "delete-marker", "recovery"],
+    "difficulty": 1,
+    "question": "버전 관리가 켜진 버킷에서 운영자가 실수로 사용자 업로드 프리픽스 전체를 지웠다. 목록에서 객체들이 사라져 서비스가 404를 내보내고, 다른 곳에는 사본이 없다. 객체를 되돌리려면?",
+    "options": [
+      {
+        "text": "각 키의 최신 버전이 된 삭제 마커를 그 버전 ID로 지정해 지우면 이전 버전이 다시 최상위가 되어 복원된다",
+        "correct": true,
+        "why": "지워진 것으로 보이는 상태의 실체는 마커가 최신이라는 것뿐이다. 마커를 지우면 이전 버전이 돌아온다."
+      },
+      {
+        "text": "버전 관리는 앞으로의 삭제를 막는 기능일 뿐 이미 지워진 객체는 끝까지 갔으니, 사용자 재업로드를 받는 수밖에 없다",
+        "distractorType": "one-step-short",
+        "why": "DELETE가 남긴 것이 마커라는 사실을 몰라 복구 불가로 단정한 것이다."
+      },
+      {
+        "text": "버전 관리를 일시중단하면 삭제가 취소되고 이전 버전이 다시 최상위로 노출된다",
+        "distractorType": "adjacent",
+        "why": "일시중단은 새 쓰기에 버전을 못 붙이게 할 뿐 남은 마커를 지우지 않는다."
+      },
+      {
+        "text": "지워진 객체는 30일 보관 창이 있으니 창이 끊기기 전에 콘솔에서 골라 복구한다",
+        "distractorType": "plausible-number",
+        "why": "휴지통이나 보관 창은 없다. 버전 관리가 유일한 방어선이며 기한도 없다."
+      }
+    ],
+    "explanation": "버전 관리 버킷에서 버전을 지정하지 않은 DELETE는 삭제 마커를 최신 버전으로 추가할 뿐 이전 버전을 건드리지 않는다. 목록에서 사라지고 GET이 404로 나오는 것도 마커가 최신이기 때문이다. 그래서 복구는 마커를 지우는 작업이고, 마커의 버전 ID를 지정해 삭제하면 이전 버전이 다시 최상위가 되어 객체가 돌아온다. 버전 ID 없이 다시 DELETE를 날리면 마커가 하나 더 쌓일 뿐이니 주의한다. 휴지통 같은 시간 창은 없어서 버전 관리가 꺼져 있었다면 이 복구 경로 자체가 없다.",
+    "source": "AWS S3 User Guide, Managing delete markers (삭제 마커 제거로 undelete)"
+  },
+  {
+    "id": "storage-presigned-expiry-scope-001",
+    "topic": "storage",
+    "tags": ["presigned-url", "expiry", "upload-constraint"],
+    "difficulty": 1,
+    "question": "presigned PUT 업로드 남용이 늘어 만료를 5분으로 줄이고 발급 API에 레이트리밋을 걸었다. 발급 건수는 줄었지만, 발급된 창 안에서 여전히 수백 MB짜리 임의 파일이 올라온다. 이 두 조치가 통제하는 것은?",
+    "options": [
+      {
+        "text": "만료와 레이트리밋은 URL 실행 시점에 발급받은 사용자의 자격까지 검증한다. 세션이 끊긴 사용자의 URL은 거부된다",
+        "distractorType": "adjacent",
+        "why": "URL 검증은 서명과 만료만 본다. 발급 인가와 실행 인가를 한 층으로 묶은 것이다."
+      },
+      {
+        "text": "만료 5분은 업로드 도중에도 적용되어, 그 안에 끝내지 못한 큰 파일은 자동으로 실패한다",
+        "distractorType": "inverted",
+        "why": "만료 검증은 요청 시작 시점 기준이다. 진행 중인 전송을 끊는 타이머가 아니다."
+      },
+      {
+        "text": "언제, 누가, 몇 번 발급받는가만 통제한다. 무엇이 올라오는가는 발급 시 사전 제약이나 사후 검증 없이는 통제되지 않는다",
+        "correct": true,
+        "why": "시간축과 내용축은 다른 축이다. 창을 조여도 창 안의 내용은 자유롭다."
+      },
+      {
+        "text": "직접 업로드에서 크기 제한은 원천 불가능하다. 통제하려면 서버 경유 업로드로 되돌아가야 한다",
+        "distractorType": "overgeneralized",
+        "why": "폼 업로드 POST 정책의 content-length-range가 사전 제약 수단이다. 불가능이 아니라 설계 선택이다."
+      }
+    ],
+    "explanation": "만료와 발급 레이트리밋이 통제하는 건 시간축과 횟수축이다. 언제 창이 열리는지, 누가 몇 번 URL을 받는지는 줄었지만 창이 열려 있는 동안 무엇이 올라오는지는 이 조치들이 전혀 보지 못한다. 내용축을 통제하려면 발급 시점의 사전 제약(폼 업로드 POST 정책의 content-length-range)이나 업로드 후 이벤트 기반 사후 검증을 설계해야 한다. 만료가 업로드 도중을 끊는 타이머라고 기대하는 것도 검증 시점에 대한 오해다. 서버 경유로 돌아가는 것은 선택지이지 유일한 해법이 아니다.",
+    "source": "AWS S3 User Guide, Browser-based uploads using POST (POST policy의 content-length-range); AWS S3 User Guide, Share an object with a presigned URL"
+  },
+  {
+    "id": "storage-presigned-signed-headers-001",
+    "topic": "storage",
+    "tags": ["presigned-url", "signed-headers", "sigv4"],
+    "difficulty": 2,
+    "question": "서버가 SDK로 presigned PUT URL을 발급하고 브라우저가 fetch로 파일을 올린다. 어떤 파일은 올라가고 어떤 파일은 SignatureDoesNotMatch 403이 난다. 실패한 파일은 발급 시 지정한 Content-Type과 브라우저가 보낸 값이 다르다. 이유는?",
+    "options": [
+      {
+        "text": "CORS 프리플라이트가 Content-Type을 바꿔 버리는 문제다. 버킷 CORS 규칙에 헤더를 추가하면 맞춰진다",
+        "distractorType": "adjacent",
+        "why": "CORS 규칙은 브라우저가 보낼 수 있는 헤더를 허가할 뿐 서명된 값을 대신 맞춰주지 않는다."
+      },
+      {
+        "text": "서명 범위에 들어간 헤더는 요청에 같은 값으로 실려야 한다. Content-Type이 서명에 포함됐으면 그 값을 그대로 보내야 한다",
+        "correct": true,
+        "why": "서명은 URL뿐 아니라 지정된 헤더까지 묶는다. 값이 어긋난 요청만 서명이 깨진다."
+      },
+      {
+        "text": "서명은 URL과 만료만 검사하므로 헤더 차이로 깨질 수 없다. 실패 파일은 크기 상한을 넘은 것이다",
+        "distractorType": "overgeneralized",
+        "why": "서명 범위를 URL로 한정해서 믿은 것이다. PUT presigned에는 크기 상한도 없다."
+      },
+      {
+        "text": "옛 SigV2 서명은 헤더를 묶지 않아 이런 실패가 없었다. SDK 서명 버전을 낮추면 해결된다",
+        "distractorType": "outdated",
+        "why": "하위 서명으로의 회귀는 이미 닫힌 길이다. 문제는 서명 범위에 대한 이해다."
+      }
+    ],
+    "explanation": "presigned URL의 서명은 경로와 만료뿐 아니라 서명 범위(signed headers)에 포함된 헤더까지 묶는다. 발급 시 Content-Type을 지정해 서명에 넣었는데 브라우저가 다른 값을 보내면 그 요청만 서명이 어긋나 403이 난다. 그래서 증상이 파일 단위로 갈라진다. 해결은 값을 맞추는 방향이다. 브라우저가 보낼 값을 발급 시 지정하거나, 서명에서 Content-Type을 빼고 받는 쪽에서 판단하게 한다. CORS 규칙은 헤더 허가의 이야기라 이 문제를 건드리지 않고, 서명 버전을 낮추는 길은 이미 닫혀 있다.",
+    "source": "AWS S3 User Guide, Uploading objects with presigned URLs (발급 시와 동일한 Content-Type 사용); AWS S3 User Guide, Using presigned URLs (SignatureDoesNotMatch 트러블슈팅)"
+  },
+  {
+    "id": "storage-checksum-endtoend-001",
+    "topic": "storage",
+    "tags": ["integrity", "checksum", "corruption"],
+    "difficulty": 3,
+    "question": "수 테라바이트 아카이브를 클라이언트와 S3 사이에 주고받는 시스템에서 드물게 받은 쪽의 파일이 깨져 있다. 'TCP가 체크섬을 하니 전송 구간의 손상은 걸러지고, 애플리케이션 체크섬은 이중 작업'이라는 주장에 대한 판단은?",
+    "options": [
+      {
+        "text": "깨짐은 잘 저장된 원본을 받는 쪽 디스크가 일으키는 것이니, 전송 축은 안전하고 클라이언트 저장 장치 점검이 먼저다",
+        "distractorType": "adjacent",
+        "why": "손상 위치를 근거 없이 한 축으로 특정해 전송 축 검증을 건너뛰게 만든 진단이다."
+      },
+      {
+        "text": "GCS는 서버가 모든 객체의 md5Hash를 계산해 주니 S3도 ETag 비교로 충분하다. ETag가 곧 무결성 증명이다",
+        "distractorType": "vendor-mixup",
+        "why": "GCS 관행을 S3에 이식했고 ETag는 multipart에서 전체 무결성 증명이 아니다."
+      },
+      {
+        "text": "TCP가 손상을 걸러내므로 깨진 파일은 애초에 올라가기 전부터 깨져 있던 것이다. 업로드 전 로컬 검사만 추가하면 된다",
+        "distractorType": "overgeneralized",
+        "why": "TCP 체크섬을 완전한 종단 보장으로 믿은 것이다. 약검사라 위장 손상은 통과한다."
+      },
+      {
+        "text": "TCP 체크섬은 16비트 약검사라 놓치는 손상이 있다. 올릴 때 x-amz-checksum을 실어 서버가 검증하고 받을 때 값을 회수해 비교해야 종단 간이 보장된다",
+        "correct": true,
+        "why": "종단 간 보장은 송신자가 계산해 수신자가 비교하는 값의 전달로 만든다. 전송 계층의 약검사가 대신하지 않는다."
+      }
+    ],
+    "explanation": "TCP 체크섬은 필드 자체가 16비트인 약한 검사라 우연히 통과하는 손상이 있고 전 경로를 덮지도 않는다. 종단 간 무결성은 송신자가 계산한 값을 수신자가 비교하는 구조로 만드는 것이고 객체 스토리지에서는 업로드에 x-amz-checksum 계열(CRC32, CRC32C, SHA-1, SHA-256)을 실어 S3가 검증하고 다운로드 시 같은 값을 회수해 비교하는 방식이다. ETag 비교는 multipart에서 전체 증명이 되지 않고 GCS의 서버 계산 md5Hash 관행은 벤더를 바꿔야만 하는 이야기다. Content-MD5는 레거시로 남아 있을 뿐이다.",
+    "source": "AWS S3 User Guide, Checking object integrity (x-amz-checksum 계열, 업로드 검증·다운로드 회수); RFC 9293 (TCP 헤더 체크섬 필드)"
+  },
+  {
+    "id": "storage-presigned-revoke-001",
+    "topic": "storage",
+    "tags": ["presigned-url", "revocation", "bearer"],
+    "difficulty": 3,
+    "question": "다운로드용 presigned URL을 발급하다 만료를 7일로 잘못 지정해, 민감 문서 수백 건의 URL이 이미 나가 버렸다. 만료 전 노출을 지금 끊으려면?",
+    "options": [
+      {
+        "text": "URL 폐기 수단은 없다. 서명에 쓰인 자격 증명을 비활성화하면 더 늦은 만료라도 무효가 된다",
+        "correct": true,
+        "why": "presigned URL은 발급 후 회수할 방법이 없다. 유효성을 끊을 수 있는 축은 서명 자격뿐이다."
+      },
+      {
+        "text": "발급 서버의 세션 스토어를 비우면 그 세션으로 발급된 URL도 함께 폐기된다",
+        "distractorType": "adjacent",
+        "why": "URL은 소지 기반이라 서버 세션과 묶여 있지 않다. OTP 같은 폐기 모델을 겹쳐 본 것이다."
+      },
+      {
+        "text": "같은 키로 만료를 짧게 잡은 URL을 다시 발급하면 기존 URL은 대체되어 무효가 된다",
+        "distractorType": "inverted",
+        "why": "재발급은 새 URL을 하나 더 만들 뿐이다. 기존 서명을 덮어쓰지 않는다."
+      },
+      {
+        "text": "버킷 정책에서 URL을 발급받은 사용자 계정을 차단하면 해당 URL의 실행이 거부된다",
+        "distractorType": "overgeneralized",
+        "why": "URL 검증은 발급 맥락의 신원을 보지 않는다. 차단은 재발급만 막을 뿐이다."
+      }
+    ],
+    "explanation": "presigned URL은 만료 전에 폐기할 수단이 없다. 유효성을 지금 끊을 수 있는 축은 서명에 쓰인 자격 증명이고 그 자격이 비활성화나 삭제로 무효가 되면 이후 만료 시점과 무관하게 URL이 만료된다. 세션 폐기나 재발급은 서명과 무관하고 사용자 계정 차단은 새 발급을 막을 뿐 이미 나간 URL의 실행 검증에 영향을 주지 않는다. 임시 자격으로 발급했다면 자격 만료가 자연 상한이 되고 영구 키로 발급했다면 이번처럼 키 비활성화가 사후 차단의 마지막 수단이다. 사고 전에 할 수 있었던 일은 만료를 짧게 잡는 것뿐이다.",
+    "source": "AWS S3 User Guide, Using presigned URLs (자격 증명 무효화 시 만료 시점과 무관하게 URL 만료)"
   }
 ]

@@ -34,11 +34,6 @@
       "url": "https://medium.com/daangn/lambda-edge%EB%A1%9C-%EA%B5%AC%ED%98%84%ED%95%98%EB%8A%94-on-the-fly-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EB%A6%AC%EC%82%AC%EC%9D%B4%EC%A7%95-f4e5052d49f3"
     },
     {
-      "match": "이미지 썸네일 생성 개발 후기",
-      "label": "당근 테크블로그 — AWS Lambda를 이용한 이미지 썸네일 생성 개발 후기",
-      "url": "https://medium.com/daangn/aws-lambda%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EC%8D%B8%EB%84%A4%EC%9D%BC-%EC%83%9D%EC%84%B1-%EA%B0%9C%EB%B0%9C-%ED%9B%84%EA%B8%B0-acc278d49980"
-    },
-    {
       "match": "multipart upload",
       "label": "AWS S3 — Uploading and copying objects using multipart upload",
       "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html"
@@ -322,6 +317,161 @@
       "match": "CIPA DC-008",
       "label": "CIPA DC-008 — Exif 사양",
       "url": "https://www.cipa.jp/std/documents/download_e.html?DC-008-Translation-2019-E"
+    },
+    {
+      "match": "모니터링 및 메트릭",
+      "label": "CloudFront 메트릭 보기",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/viewing-cloudfront-metrics.html"
+    },
+    {
+      "match": "액세스 로그",
+      "label": "CloudFront 표준 로그",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html"
+    },
+    {
+      "match": "실시간 로그",
+      "label": "CloudFront 실시간 로그",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/real-time-logs.html"
+    },
+    {
+      "match": "파일 무효화",
+      "label": "CloudFront 파일 무효화",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Invalidation.html"
+    },
+    {
+      "match": "ITU-T T.81",
+      "label": "ITU-T T.81 (JPEG)",
+      "url": "https://www.itu.int/rec/T-REC-T.81"
+    },
+    {
+      "match": "ISO/IEC 15948",
+      "label": "PNG 사양 (W3C — ISO/IEC 15948과 동일 내용)",
+      "url": "https://www.w3.org/TR/png-3/"
+    },
+    {
+      "match": "sharp 공개 문서",
+      "label": "sharp — resize",
+      "url": "https://sharp.pixelplumbing.com/api-resize"
+    },
+    {
+      "match": "Optimize Cumulative Layout Shift",
+      "label": "web.dev — CLS 최적화",
+      "url": "https://web.dev/articles/optimize-cls"
+    },
+    {
+      "match": "BlurHash",
+      "label": "BlurHash",
+      "url": "https://github.com/woltapp/blurhash"
+    },
+    {
+      "match": "sizes 속성",
+      "label": "HTML 표준 — sizes 속성",
+      "url": "https://html.spec.whatwg.org/multipage/images.html#sizes-attributes"
+    },
+    {
+      "match": "Responsive images",
+      "label": "MDN — 반응형 이미지",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images"
+    },
+    {
+      "match": "picture 요소",
+      "label": "HTML 표준 — picture 요소",
+      "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-picture-element"
+    },
+    {
+      "match": "Using the picture element",
+      "label": "MDN — picture",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/picture"
+    },
+    {
+      "match": "SVG as an image",
+      "label": "MDN — 이미지로서의 SVG",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/SVG/Guides/SVG_as_an_image"
+    },
+    {
+      "match": "New <video> Policies for iOS",
+      "label": "WebKit — iOS video 정책",
+      "url": "https://webkit.org/blog/6784/new-video-policies-for-ios/"
+    },
+    {
+      "match": "Autoplay guide",
+      "label": "MDN — 자동재생 안내",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay"
+    },
+    {
+      "match": "CSS Color Module Level 4",
+      "label": "CSS Color 4",
+      "url": "https://www.w3.org/TR/css-color-4/"
+    },
+    {
+      "match": "color-gamut",
+      "label": "MDN — color-gamut",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/color-gamut"
+    },
+    {
+      "match": "srcset",
+      "label": "HTML 표준 — srcset",
+      "url": "https://html.spec.whatwg.org/multipage/images.html#srcset-attributes"
+    },
+    {
+      "match": "Replicating objects",
+      "label": "S3 객체 복제",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication.html"
+    },
+    {
+      "match": "S3 Batch Replication",
+      "label": "S3 배치 복제",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-batch-replication-batch.html"
+    },
+    {
+      "match": "Event notification message structure",
+      "label": "S3 이벤트 메시지 구조",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html"
+    },
+    {
+      "match": "server access logging",
+      "label": "S3 서버 액세스 로깅",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html"
+    },
+    {
+      "match": "Logging options for Amazon S3",
+      "label": "S3 로깅 옵션",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/logging-with-S3.html"
+    },
+    {
+      "match": "Lifecycle transition general considerations",
+      "label": "S3 수명주기 전이 고려사항",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html"
+    },
+    {
+      "match": "Expiring object versions",
+      "label": "S3 객체 버전 만료",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-expire-general-considerations.html"
+    },
+    {
+      "match": "delete marker",
+      "label": "S3 삭제 마커",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html"
+    },
+    {
+      "match": "Managing delete markers",
+      "label": "S3 삭제 마커 관리",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ManagingDelMarkers.html"
+    },
+    {
+      "match": "HLS Authoring Specification",
+      "label": "Apple HLS Authoring Specification",
+      "url": "https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices"
+    },
+    {
+      "match": "draft-pantos-hls-rfc8216bis",
+      "label": "HLS 2판 초안 (LL-HLS)",
+      "url": "https://datatracker.ietf.org/doc/draft-pantos-hls-rfc8216bis/"
+    },
+    {
+      "match": "A Buffer-Based Approach to Rate Adaptation",
+      "label": "Huang et al., BBA (SIGCOMM 2014)",
+      "url": "https://web.stanford.edu/class/cs244/papers/sigcomm2014-video.pdf"
     }
   ]
 }
