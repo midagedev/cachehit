@@ -30,7 +30,12 @@ const NEGATIVE_PATTERNS = [/않은\s*것/, /아닌\s*것/, /틀린\s*것/, /옳�
 const PREMISE_DEFECT_PATTERNS = [
   /결함/, /무엇이\s*깨/, /무엇이\s*문제/, /왜\s*실패/, /왜\s*깨/,
   /사고가\s*(발생|났)/, /장애가\s*(발생|났)/, /버그/, /틀렸/, /잘못/,
+  /실질적\s*문제/, /지적될\s*문제/, /문제점/, /문제는\s*\?/,
 ]
+// 결함을 전제하면서도 **처방**을 묻는 발문은 위 두 검사에서 제외한다. 그때는 오답이
+// 처방 형태인 것이 정상이고(§3-11 은 "결함을 물었는데 결함을 말한 보기가 하나"를 잡는다),
+// "문제 없다"류 보기도 "손댈 필요 없다"는 유효한 판단으로 경쟁할 수 있다.
+const PRESCRIPTION_PATTERNS = [/대응은/, /해법은/, /해결은/, /무엇을\s*해야/, /옳은\s*조치/, /어떻게\s*(고쳐|바꿔)/]
 // 그 전제를 부정하는 보기 = 죽은 보기
 const PREMISE_DENIAL_PATTERNS = [
   /문제\s*없/, /이상\s*없/, /결함\s*(이|은)?\s*없/, /문제(가|되)?\s*(되지|하지)\s*않/,
@@ -56,6 +61,8 @@ const PREMISE_DENIAL_PATTERNS = [
 
 const errors = []
 const warnings = []
+// §3-11 자기점검 대상. 게이트는 이 축을 판정하지 않고 봐야 할 문항만 모아 준다.
+const defectStemIds = []
 const err = (id, msg) => errors.push({ id, msg })
 const warn = (id, msg) => warnings.push({ id, msg })
 
@@ -160,8 +167,15 @@ function checkQuestion(q) {
   if (correct.length !== 1 || wrong.length !== 3) return
 
   // §3-9 발문이 결함을 전제하는데 그 전제를 부정하는 오답 — 읽자마자 소거되는 죽은 보기
-  const premisesDefect = PREMISE_DEFECT_PATTERNS.some((re) => re.test(q.question || ''))
+  const premisesDefect =
+    PREMISE_DEFECT_PATTERNS.some((re) => re.test(q.question || '')) &&
+    !PRESCRIPTION_PATTERNS.some((re) => re.test(q.question || ''))
   if (premisesDefect) {
+    // §3-11 이 발문 형태는 그 자체로 위험하다. 결함을 묻는 발문의 오답은 방어·처방·부정으로
+    // 쓰기가 쉽고, 그러면 "결함을 서술한 보기"가 정답 하나뿐이라 문형만으로 답이 특정된다.
+    // 결함 서술 여부는 기계로 판정할 수 없으므로 여기서는 **대상만 지목**한다 — 판정하는
+    // 척하는 게이트를 만들지 않는 것이 §3-9 아래의 실측 기록이 말하는 교훈이다.
+    defectStemIds.push(id)
     for (const [i, o] of opts.entries()) {
       if (o.correct) continue
       if (PREMISE_DENIAL_PATTERNS.some((re) => re.test(o.text || '')))
@@ -245,6 +259,9 @@ if (process.argv.includes('--json')) {
   console.log(`  난이도: 1=${byDiff[1]} 2=${byDiff[2]} 3=${byDiff[3]}`)
   console.log(`  오답유형: ${Object.entries(byType).map(([k, v]) => `${k} ${v}`).join(' / ') || '-'}`)
   console.log(`  부정형 발문: ${stats.negatives}건`)
+  console.log(`  결함형 발문: ${defectStemIds.length}건 — §3-11 자기점검 대상 (목록: --defect-stems)`)
+  if (process.argv.includes('--defect-stems'))
+    for (const i of defectStemIds) console.log(`    · ${i}`)
   if (warnings.length) {
     console.log(`\n경고 ${warnings.length}건`)
     for (const w of warnings) console.log(`  ⚠ [${w.id}] ${w.msg}`)
