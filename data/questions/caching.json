@@ -338,7 +338,7 @@
       }
     ],
     "explanation": "Cache-Control은 요청 방향에서도 쓰인다. only-if-cached는 클라이언트가 '캐시에 없으면 실패해도 좋다'고 선언하는 조건이고, 조건이 안 맞으면 504가 돌아온다. max-age, max-stale, min-fresh도 클라이언트가 지나가는 캐시에 내거는 같은 부류의 제약이다. 오프라인 경험 설계에서는 이 요청 방향 지시와 캐시 가능한 응답 설계가 짝을 이뤄야 한다.",
-    "source": "RFC 9111 §5.2.1 (only-if-cached 요청 디렉티브)"
+    "source": "RFC 9111 §5.2.1.7 (only-if-cached)"
   },
   {
     "id": "caching-invalidation-001",
@@ -368,8 +368,8 @@
         "why": "s-maxage는 공유 캐시용 값이라 방향이 반대고, purge 대상인 엣지 캐시는 그대로 남는다."
       }
     ],
-    "explanation": "이름이 같은 채 내용이 바뀌는 순간 무효화라는 상태ful 운영이 태어난다. 내용 해시를 파일명에 넣으면 바뀐 내용은 새 URL이 되고 참조하는 문서만 갱신하면 된다. 이 구조에서는 TTL을 1년까지 줄 수 있고 immutable을 얹어 리로드 재검증까지 없앤다. HTML처럼 이름을 못 바꾸는 자원만 no-cache로 재검증을 맡기는 2층 구조가 정석이고, 이것이 번들러 해시 파일명이 업계 표준이 된 이유다.",
-    "source": "I-D draft-montgomery-httpbis-immutable (내용 주소 URL과 무효화 제거 패턴), Google Cloud CDN·AWS CloudFront 공식 무효화 API 문서(벤더별 단위·전파 상이)"
+    "explanation": "이름이 같은 채 내용이 바뀌는 순간 무효화라는 상태ful 운영이 태어난다. 내용 해시를 파일명에 넣으면 바뀐 내용은 새 URL이 되고 참조하는 문서만 갱신하면 된다. 이 구조에서는 TTL을 1년까지 줄 수 있다. immutable(RFC 8246)을 얹으면 리로드 재검증까지 줄지만, 이 지시를 기본 지원하는 주요 브라우저가 사실상 없어 실효는 제한적이다. HTML처럼 이름을 못 바꾸는 자원만 no-cache로 재검증을 맡기는 2층 구조가 정석이고, 이것이 번들러 해시 파일명이 업계 표준이 된 이유다.",
+    "source": "RFC 8246 (HTTP Immutable Responses), Google Cloud CDN·AWS CloudFront 공식 무효화 API 문서(벤더별 단위·전파 상이)"
   },
   {
     "id": "caching-cdn-cache-control-001",
@@ -399,8 +399,8 @@
         "why": "특정 CDN 계층을 겨냥하는 헤더가 별도로 존재한다. s-maxage가 묶는 공유 캐시 전체에서 한 계층만 값을 따로 갖게 된다."
       }
     ],
-    "explanation": "브라우저와 엣지의 TTL 요구는 롤백 가능성과 오리진 보호 때문에 정반대로 갈리기 쉽고, 공유 캐시 사이에서도 우리 CDN과 그 뒤 계층을 다르게 하고 싶을 때가 있다. s-maxage는 공유 캐시 전체를 하나의 값으로 묶기 때문에 이런 세 층 요구를 표현하지 못한다. CDN-Cache-Control이나 Surrogate-Control 같은 계층 지정 헤더가 이 간극을 메우며, 일부 벤더는 자체 헤더까지 포함한 우선순위를 문서로 정해 둔다. 단 이 헤더들은 표준이 아니므로 대상 CDN의 해석 문서 확인이 전제다.",
-    "source": "Cloudflare 공식 문서 CDN-Cache-Control(계층별 우선순위), Fastly 문서 Surrogate-Control"
+    "explanation": "브라우저와 엣지의 TTL 요구는 롤백 가능성과 오리진 보호 때문에 정반대로 갈리기 쉽고, 공유 캐시 사이에서도 우리 CDN과 그 뒤 계층을 다르게 하고 싶을 때가 있다. s-maxage는 공유 캐시 전체를 하나의 값으로 묶기 때문에 이런 세 층 요구를 표현하지 못한다. CDN-Cache-Control이나 Surrogate-Control 같은 계층 지정 헤더가 이 간극을 메우며, 일부 벤더는 자체 헤더까지 포함한 우선순위를 문서로 정해 둔다. CDN-Cache-Control은 RFC 9213(2022, Standards Track)으로 표준화됐고 Surrogate-Control은 비표준이다. 다만 계층별 우선순위의 세부 해석은 여전히 대상 CDN 문서 확인이 전제다.",
+    "source": "RFC 9213 §2 (Targeted Cache-Control Header Fields), Cloudflare 공식 문서 CDN-Cache-Control(계층별 우선순위), Fastly 문서 Surrogate-Control"
   },
   {
     "id": "caching-set-cookie-001",
@@ -410,28 +410,28 @@
     "question": "세션 관리 정책을 바꾸면서 캐시 대상 HTML 응답 전부에 Set-Cookie 가 실리게 됐다. 그 뒤로 CDN 히트율이 90%대에서 한 자릿수로 떨어졌다. 원인은?",
     "options": [
       {
-        "text": "쿠키를 발급하는 응답은 명시적 허용이 없으면 공유 캐시가 저장하지 않는 것이 규범이기 때문이다",
+        "text": "쿠키를 발급하는 응답은 주요 프록시·CDN이 기본 정책으로 저장하지 않기 때문이다",
         "correct": true,
-        "why": "쿠키가 얹힌 응답은 한 사람에게 맞춰진 것으로 보인다. 그래서 표준은 허용 없는 저장을 금지하고 히트율이 0에 수렴한다."
+        "why": "쿠키가 얹힌 응답은 개인화된 것으로 취급된다. 표준이 금지하는 것은 아니지만 구현이 보수적으로 회피하므로 히트율이 0에 수렴한다."
       },
       {
         "text": "브라우저가 쿠키가 실린 응답을 캐시하지 않기로 되어 있기 때문이다",
         "distractorType": "inverted",
-        "why": "저장을 피하는 쪽은 공유 캐시의 규범이고 브라우저는 쿠키 응답도 캐시한다. 주체를 뒤집었다."
+        "why": "저장을 피하는 쪽은 공유 캐시 구현이고 브라우저는 쿠키 응답도 캐시한다. 주체를 뒤집었다."
       },
       {
         "text": "Set-Cookie가 Vary: Cookie 를 암시적으로 만들어 키가 사용자 수만큼 갈라지기 때문이다",
         "distractorType": "adjacent",
-        "why": "쿠키 헤더가 Vary를 유발하지는 않는다. 유명한 카디널리티 문제와 저장 금지 규범을 섞었다."
+        "why": "쿠키 헤더가 Vary를 유발하지는 않는다. 유명한 카디널리티 문제와 구현의 저장 회피를 섞었다."
       },
       {
         "text": "쿠키 헤더 크기가 CDN의 객체 저장 한도를 넘어 저장이 거부되기 때문이다",
         "distractorType": "plausible-number",
-        "why": "저장 회피는 크기와 무관하다. 원인은 용량이 아니라 규범이다."
+        "why": "저장 회피는 크기와 무관하다. 원인은 용량이 아니라 캐시 구현의 기본 정책이다."
       }
     ],
-    "explanation": "공유 캐시 입장에서 쿠키가 얹힌 응답은 개인화된 것이다. 그래서 표준은 명시적 캐싱 허용이 없는 한 저장하지 않도록 하고, 결과적으로 히트율이 바닥난다. 해법은 헤더를 더 붙이는 것이 아니라 캐시 대상 경로에서 쿠키를 아예 내리지 않는 구조다. 세션 발급을 별도 경로로 옮기거나 엣지에서 쿠키 축을 분리하는 식이다. 쿠키를 캐시 키에 넣는 것도 값이 사용자별로 갈라지는 최악의 선택이라 피해야 한다.",
-    "source": "RFC 9111 §3 (Storing Responses in Caches — Set-Cookie 저장 규칙)"
+    "explanation": "공유 캐시 입장에서 쿠키가 얹힌 응답은 개인화된 것이다. 표준은 이것을 금지하지 않는다 — RFC 9111 §7.3은 Set-Cookie가 캐싱을 억제하지 않는다고 명시한다. 저장을 피하는 것은 구현의 기본값이며(nginx는 Set-Cookie가 있으면 캐시하지 않고 proxy_ignore_headers로만 해제된다), 결과적으로 히트율이 바닥난다. 벤더마다 기본값이 다르니 우리 앞단의 동작을 문서로 확인해야 한다. 해법은 헤더를 더 붙이는 것이 아니라 캐시 대상 경로에서 쿠키를 아예 내리지 않는 구조다. 세션 발급을 별도 경로로 옮기거나 엣지에서 쿠키 축을 분리하는 식이다. 쿠키를 캐시 키에 넣는 것도 값이 사용자별로 갈라지는 최악의 선택이라 피해야 한다.",
+    "source": "nginx 공식 문서 ngx_http_proxy_module(Set-Cookie가 있으면 응답을 캐시하지 않는다); RFC 9111 §7.3 (Caching of Sensitive Information — 표준은 Set-Cookie로 캐싱을 금지하지 않는다)"
   },
   {
     "id": "caching-etag-origin-001",
@@ -469,7 +469,7 @@
     "topic": "caching",
     "tags": ["vary", "accept-encoding", "normalization"],
     "difficulty": 2,
-    "question": "API 응답에 gzip과 brotli 압축을 적용하면서 Vary: Accept-Encoding 을 붙였다. 히트율이 기대보다 낮아 로그를 보니 같은 브라우저의 요청에서도 Accept-Encoding 문자열이 q값과 순서 차이로 제각각이다. 원인은?",
+    "question": "API 응답에 gzip과 brotli 압축을 적용하면서 Vary: Accept-Encoding 을 붙였다. 히트율이 기대보다 낮아 로그를 보니 클라이언트와 중간 프록시에 따라 Accept-Encoding 문자열이 q값과 순서 차이로 제각각이다. 원인은?",
     "options": [
       {
         "text": "Vary를 붙이면 헤더 축만큼 키가 늘어나 압축 응답에서는 피할 수 없기 때문이다",
@@ -660,12 +660,12 @@
       {
         "text": "주요 브라우저가 모두 같은 의미로 지원하므로 동작이 보장되는 셈이다",
         "distractorType": "vendor-mixup",
-        "why": "지원 편차가 실재하는 확장을 전 브라우저 동질 지원으로 믿은 것이다. 지원하지 않는 쪽은 max-age만 따른다."
+        "why": "지원 편차가 실재하는 지시를 전 브라우저 동질 지원으로 믿은 것이다. 지원하지 않는 쪽은 max-age만 따른다."
       },
       {
-        "text": "immutable은 표준이 아닌 확장 제안이라 동작 보장은 대상 브라우저의 지원에 달려 있다",
+        "text": "immutable은 표준이지만 구현은 선택이라 동작 보장은 브라우저 지원에 달려 있다",
         "correct": true,
-        "why": "I-D 단계의 확장이고 채택·해석에 편차가 있다. 지원하지 않는 브라우저에서는 그냥 max-age로 동작한다."
+        "why": "표준 트랙 문서가 있는 것과 브라우저가 구현한 것은 다른 이야기다. 지원하지 않는 브라우저에서는 그냥 max-age로 동작한다."
       },
       {
         "text": "만료 이후에도 재검증 없이 재사용을 계속 허용하는 것이 immutable의 효과다",
@@ -678,7 +678,7 @@
         "why": "신선 수명은 max-age가 정한다. immutable은 수명을 늘리는 지시가 아니라 재검증 습관을 줄이는 지시다."
       }
     ],
-    "explanation": "immutable은 RFC 트랙 밖에 있는 확장 제안이고, 효과도 한정적이다 — fresh 기간에 사용자가 리로드를 해도 재검증을 생략하게 하는 것뿐이다. 해시 파일명과 1년 max-age 조합의 설계 자체는 여전히 옳지만, '표준 보장'이라고 적어 두면 지원하지 않는 브라우저에서 기대가 어긋났을 때 원인 진단이 늦어진다. 신선 수명을 정하는 것은 어디까지나 max-age라는 점도 함께 못박아 둔다. 문서에는 '지원하는 브라우저에서 리로드 재검증을 줄여 주는 확장' 정도로 정확하게 쓰는 것이 관리 가능하다.",
+    "explanation": "immutable은 RFC 8246(Standards Track, 2017)으로 표준화된 지시지만 구현은 선택이고, 효과도 한정적이다 — fresh 기간에 사용자가 리로드를 해도 재검증을 생략하게 하는 것뿐이다. 표준 문서가 있다는 것이 곧 동작 보장은 아니다: 이 지시를 기본 지원하는 주요 브라우저가 사실상 없다. 해시 파일명과 1년 max-age 조합의 설계 자체는 여전히 옳지만, '표준 보장'이라고 적어 두면 지원하지 않는 브라우저에서 기대가 어긋났을 때 원인 진단이 늦어진다. 신선 수명을 정하는 것은 어디까지나 max-age라는 점도 함께 못박아 둔다. 문서에는 '지원하는 브라우저에서 리로드 재검증을 줄여 주는 표준 지시' 정도로 정확하게 쓰는 것이 관리 가능하다.",
     "source": "RFC 8246 (HTTP Immutable Responses), RFC 9111 §5.2.2.1 (max-age)"
   },
   {

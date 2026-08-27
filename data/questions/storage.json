@@ -337,8 +337,8 @@
         "why": "원본 부하 이야기는 맞지만 GET당 복호화라는 과금 구조는 SSE-KMS 선택 자체가 만든 것이다. 원인을 캐시로 돌렸다."
       }
     ],
-    "explanation": "SSE-KMS는 키 통제와 감사를 주는 대신 비용 구조를 바꾼다. 객체를 읽을 때마다 KMS 복호화 API 호출이 따라붙어 요청당 과금과 스로틀 한도의 영향을 받는다. KMS 요금은 저장량이 아니라 요청 횟수 축이므로 데이터 증가라는 진단은 축 자체가 틀렸다. 키 회전도 원인이 아니다. 회전은 새 쓰기에 새 키 버전을 쓸 뿐 기존 객체는 구버전 키로 복호화만 한다. 읽기가 뜨거운 세그먼트에서는 CDN 캐시로 원본 GET을 줄이거나 grant 최적화, 세그먼트별 암호화 방식 재설계로 완화한다. 암호화 옵션 하나가 읽기 비용 구조를 바꾼다는 걸 청구서 항목 단위로 봐야 한다.",
-    "source": "AWS S3 User Guide, Protecting data using SSE-KMS; AWS KMS 개발자 안내서, 키 회전 (기존 데이터는 구버전 키로 복호화)"
+    "explanation": "SSE-KMS는 키 통제와 감사를 주는 대신 비용 구조를 바꾼다. 객체를 읽을 때마다 KMS 복호화 API 호출이 따라붙어 요청당 과금과 스로틀 한도의 영향을 받는다. KMS 요금은 저장량이 아니라 요청 횟수 축이므로 데이터 증가라는 진단은 축 자체가 틀렸다. 키 회전도 원인이 아니다. 회전은 새 쓰기에 새 키 버전을 쓸 뿐 기존 객체는 구버전 키로 복호화만 한다. 1차 처방은 S3 Bucket Keys다 — 버킷 수준 키를 캐시해 객체마다 나가던 KMS 호출을 크게 줄인다. 그 위에 읽기가 뜨거운 세그먼트는 CDN 캐시로 원본 GET을 줄이고, 남는 축은 grant 최적화나 세그먼트별 암호화 방식 재설계로 완화한다. 암호화 옵션 하나가 읽기 비용 구조를 바꾼다는 걸 청구서 항목 단위로 봐야 한다.",
+    "source": "AWS S3 User Guide, Protecting data using SSE-KMS; AWS S3 User Guide, Reducing the cost of SSE-KMS with S3 Bucket Keys; AWS KMS 개발자 안내서, 키 회전 (기존 데이터는 구버전 키로 복호화)"
   },
   {
     "id": "storage-presigned-reuse-001",
@@ -396,10 +396,10 @@
       {
         "text": "S3가 GCS와 달리 전체 객체의 md5Hash를 별도로 저장하지 않기 때문이다",
         "distractorType": "vendor-mixup",
-        "why": "GCS 사실 관계는 맞지만 지금 실패의 원인은 ETag 포맷이다. 벤더를 바꾸는 답이 아니라 검증 수단을 바꾸는 답이다."
+        "why": "GCS 쪽 서술은 대체로 맞지만 지금 실패의 원인은 ETag 포맷이다. 벤더를 바꾸는 답이 아니라 검증 수단을 바꾸는 답이다."
       }
     ],
-    "explanation": "단발 PUT에서 S3의 ETag는 MD5지만 multipart 객체의 ETag는 파트 수와 파트별 해시로 만든 별도 값이다. 그래서 클라이언트 MD5와 비교하면 큰 파일에서만 늘 불일치하는 현상이 나온다. 계산 로직이 틀린 게 아니다. 검증이 필요하면 요청에 체크섬을 실어 서버가 확인하게 한다. x-amz-checksum 계열이 그 역할이다. 참고로 GCS는 모든 객체의 메타데이터에 md5Hash와 crc32c를 서버가 기본 계산해 저장하므로, 한쪽 관습을 다른 쪽으로 이식하면 동작이 어긋난다.",
+    "explanation": "단발 PUT에서 S3의 ETag는 MD5지만 multipart 객체의 ETag는 파트 수와 파트별 해시로 만든 별도 값이다. 그래서 클라이언트 MD5와 비교하면 큰 파일에서만 늘 불일치하는 현상이 나온다. 계산 로직이 틀린 게 아니다. 검증이 필요하면 요청에 체크섬을 실어 서버가 확인하게 한다. x-amz-checksum 계열이 그 역할이다. 참고로 GCS는 일반 객체의 메타데이터에 md5Hash와 crc32c를 기본 계산해 저장하므로(복합 객체와 CMEK 암호화 객체에는 md5Hash가 없다), 한쪽 관습을 다른 쪽으로 이식하면 동작이 어긋난다.",
     "source": "AWS S3 User Guide, Checking object integrity (multipart ETag는 MD5가 아님); Google Cloud Storage 문서, Object metadata (md5Hash, crc32c 기본 제공)"
   },
   {

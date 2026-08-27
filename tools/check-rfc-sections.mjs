@@ -78,17 +78,26 @@ for (const n of rfcs) titles.set(n, sectionTitles(await rfcText(n)))
 
 const missing = []
 const mismatched = []
+// 한글 괄호는 우리가 쓴 설명이라 제목 대조가 성립하지 않는다. 그래서 판정하지 않고
+// 실제 절 제목과 함께 목록으로 내보낸다 — 이 사각으로 cdn-dns-ttl-001 이 빠져나갔다
+// (TTL 을 RFC 1035 §6.2 로 인용했는데 그 절의 제목은 "Standard query processing" 이다).
+const proseLabelled = []
 for (const c of cites) {
   const t = titles.get(c.rfc).get(c.sec)
   if (!t) { missing.push({ ...c, actual: null }); continue }
   if (VERBOSE) console.log(`  RFC ${c.rfc} §${c.sec} = "${t}"   ${c.id}`)
-  if (!isHeaderName(c.label)) continue
+  if (!isHeaderName(c.label)) { proseLabelled.push({ ...c, actual: t }); continue }
   const a = t.toLowerCase()
   const b = c.label.toLowerCase()
   if (!a.includes(b) && !b.includes(a)) mismatched.push({ ...c, actual: t })
 }
 
 console.log(`\n인용 ${cites.length} · 존재하지 않는 절 ${missing.length} · 제목 불일치 ${mismatched.length}`)
+if (proseLabelled.length) {
+  console.log(`\n괄호가 한글 설명이라 기계 대조가 안 되는 인용 ${proseLabelled.length}건 — 눈으로 확인할 목록:`)
+  for (const c of proseLabelled)
+    console.log(`  ${c.id}\n      RFC ${c.rfc} §${c.sec} 의 실제 제목: "${c.actual}"\n      우리가 적은 설명: "${c.label}"`)
+}
 
 if (missing.length) {
   console.log('\n존재하지 않는 절:')

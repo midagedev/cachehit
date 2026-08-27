@@ -472,6 +472,26 @@
       "match": "A Buffer-Based Approach to Rate Adaptation",
       "label": "Huang et al., BBA (SIGCOMM 2014)",
       "url": "https://web.stanford.edu/class/cs244/papers/sigcomm2014-video.pdf"
+    },
+    {
+      "match": "ngx_http_proxy_module",
+      "label": "nginx — ngx_http_proxy_module",
+      "url": "https://nginx.org/en/docs/http/ngx_http_proxy_module.html"
+    },
+    {
+      "match": "FileETag",
+      "label": "Apache httpd — FileETag",
+      "url": "https://httpd.apache.org/docs/2.4/mod/core.html#fileetag"
+    },
+    {
+      "match": "Signed URLs",
+      "label": "Google Cloud CDN — 서명된 URL",
+      "url": "https://cloud.google.com/cdn/docs/using-signed-urls"
+    },
+    {
+      "match": "S3 Bucket Keys",
+      "label": "S3 Bucket Keys — SSE-KMS 비용 절감",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html"
     }
   ]
 }
