@@ -39,7 +39,7 @@ const ANSWER = new Map(
   JSON.parse(fs.readFileSync(path.join(ROOT, 'data/questions.json'), 'utf8'))
     .map((q) => [q.question, q.options.find((o) => o.correct).text]))
 
-const SITE_MARK = 'cachehit.pages.dev'
+const SITE_MARK = 'midagedev.github.io/cachehit'
 
 const browser = await chromium.launch()
 // https 로 서빙한다 — clipboard API 는 보안 컨텍스트에서만 존재하고, 문항 복사가
@@ -53,12 +53,6 @@ const page = await context.newPage()
 const jsErrors = []
 page.on('pageerror', (e) => jsErrors.push(String(e)))
 page.on('console', (m) => { if (m.type() === 'error') jsErrors.push('console: ' + m.text()) })
-
-// 집계 비컨은 배포 호스트에서만 나가야 한다(assets/app.js 의 ANALYTICS_HOSTS 게이트).
-// 테스트 호스트에서 한 건이라도 나가면 게이트가 뚫린 것이다 — 이 검사가 없으면
-// 로컬 실행·E2E 가 실데이터를 오염시키는 회귀를 아무도 눈치채지 못한다.
-const beacons = []
-page.on('request', (r) => { if (r.url().includes('/collect')) beacons.push(r.url()) })
 
 await page.route('**/*', (route) => {
   const u = new URL(route.request().url())
@@ -198,8 +192,6 @@ console.log(`${ROUNDS}문항 진행 — 정답 ${tally.hits} / 찍어서 맞음 
 console.log(`  ${got.line}`)
 console.log(`  재도전: ${got.retry}`)
 console.log(`  원문 링크가 보인 문항: ${tally.withLinks}/${ROUNDS}`)
-if (beacons.length)
-  fails.push(`테스트 호스트에서 집계 비컨이 ${beacons.length}건 나갔다 — ANALYTICS_HOSTS 게이트가 뚫렸다: ${beacons[0]}`)
 if (jsErrors.length) {
   console.log(`\nJS 오류 ${jsErrors.length}건`)
   for (const e of jsErrors) console.log(`  ✗ ${e}`)

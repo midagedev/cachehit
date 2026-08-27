@@ -4,7 +4,7 @@
 
 매일 쓰지만 정확히는 모르는 것들을 물어봅니다. 예를 들어 `no-cache`가 실제로 무슨 뜻인지, 304가 왜 공짜가 아닌지, 코덱과 컨테이너가 어떻게 다른지를 묻습니다.
 
-**→ [퀴즈 풀어보기](https://cachehit.pages.dev)**
+**→ [퀴즈 풀어보기](https://midagedev.github.io/cachehit)**
 
 ---
 
@@ -104,19 +104,6 @@ python3 -m http.server 8000
 npm i -D playwright && npx playwright install chromium
 node tools/e2e.mjs
 ```
-
-## 호스팅과 익명 집계
-
-사이트는 Cloudflare Pages(https://cachehit.pages.dev)에서 서빙됩니다. 예전 주소
-(midagedev.github.io/cachehit)는 이 주소로 리다이렉트됩니다.
-
-같은 오리진의 `/collect` 엔드포인트([functions/collect.js](functions/collect.js))가
-익명 집계를 받습니다. **저장되는 것은 카운터 증가뿐입니다** — IP, User-Agent, 쿠키,
-식별자는 읽지도 저장하지도 않습니다. 수집 항목은 [스키마](tools/analytics-schema.sql)가
-전부입니다: 문항별 보기 선택 분포, 확신도×정답 교차표, 일 단위 방문·완주·복사·공유 횟수.
-이 데이터는 "선택률 5% 미만인 오답은 죽은 보기다"([AUTHORING.md](AUTHORING.md) §7)를
-실행하기 위한 것이고, 집계 전문은 누구나 [`/stats`](https://cachehit.pages.dev/stats)에서
-볼 수 있습니다. 로컬 실행과 E2E에서는 비컨이 나가지 않으며, 그 게이트는 E2E가 검사합니다.
 
 ## 라이선스
 
