@@ -121,7 +121,7 @@
       }
     ],
     "explanation": "멀티파트의 크기 제약은 객체 전체가 아니라 파트 각각에 걸려 있다. 마지막 파트를 제외한 모든 파트는 최소 5MB여야 하며, 위반하면 UploadPart는 성공해도 완료 단계에서 EntityTooSmall로 거부된다. 그래서 2MB 파트 6개 구성은 업로드는 되고 완료 단계에서 한꺼번에 실패하는 형태를 보인다. 파트 크기는 재전송 단위이기도 해서, 실무에서는 이 제약을 만족하는 범위 안에서 실패했을 때 다시 보내는 비용을 기준으로 파트 크기를 정한다.",
-    "source": "AWS S3 API Reference, CompleteMultipartUpload errors (EntityTooSmall); AWS S3 User Guide, Uploading objects using multipart upload (파트 최소 5MB, 마지막 제외)"
+    "source": "AWS S3 API Reference, CompleteMultipartUpload errors (EntityTooSmall); AWS S3 User Guide, multipart upload limits (파트 최소 5MiB, 마지막 제외)"
   },
   {
     "id": "storage-resumable-s3-001",
@@ -400,7 +400,7 @@
       }
     ],
     "explanation": "단발 PUT에서 S3의 ETag는 MD5지만 multipart 객체의 ETag는 파트 수와 파트별 해시로 만든 별도 값이다. 그래서 클라이언트 MD5와 비교하면 큰 파일에서만 늘 불일치하는 현상이 나온다. 계산 로직이 틀린 게 아니다. 검증이 필요하면 요청에 체크섬을 실어 서버가 확인하게 한다. x-amz-checksum 계열이 그 역할이다. 참고로 GCS는 일반 객체의 메타데이터에 md5Hash와 crc32c를 기본 계산해 저장하므로(복합 객체와 CMEK 암호화 객체에는 md5Hash가 없다), 한쪽 관습을 다른 쪽으로 이식하면 동작이 어긋난다.",
-    "source": "AWS S3 User Guide, Checking object integrity (multipart ETag는 MD5가 아님); Google Cloud Storage 문서, Object metadata (md5Hash, crc32c 기본 제공)"
+    "source": "AWS S3 User Guide, Checking object integrity (multipart ETag는 MD5가 아님); Google Cloud Storage 문서, GCS 체크섬 검증 (md5Hash, crc32c 기본 제공)"
   },
   {
     "id": "storage-ssot-orphans-001",
@@ -410,9 +410,9 @@
     "question": "presigned PUT으로 올리고 메타는 DB에 두는 서비스에서, DB에는 있는데 객체가 없어 404가 나는 케이스와 객체만 있고 DB에 없는 고아가 함께 발견됐다. 수억 개 키 규모다. 이 불일치를 상시 흡수하는 구조는?",
     "options": [
       {
-        "text": "DB 커밋을 스토리지 PUT보다 먼저 완료해 레코드가 앞서게 한다",
+        "text": "서비스 가능 상태의 레코드를 PUT보다 먼저 커밋해 확정 레코드가 앞서게 한다",
         "distractorType": "inverted",
-        "why": "그 순서가 바로 역방향 404를 양산한다. PENDING, PUT, 이벤트 확정의 순서를 뒤집은 것이다."
+        "why": "그 순서가 바로 역방향 404를 양산한다. DB 기록 자체는 정답 구조에서도 먼저지만 그것은 미확정 PENDING이고, 서비스 가능 확정은 객체 도착 이벤트 뒤여야 한다."
       },
       {
         "text": "이벤트 경로를 SNS-SQS로 이중화해 유실을 막고, 야간 배치가 전체 키를 순회하며 diff로 잔해를 정리한다",
@@ -430,7 +430,7 @@
         "why": "원자성이 없는 두 쓰기를 상태 머신으로 묶는 표준 구조다. 미완료 상태와 고아는 만료 청소로 상시 흡수한다."
       }
     ],
-    "explanation": "스토리지 PUT과 DB 커밋은 분산 시스템의 두 쓰기라 원자적으로 묶을 수 없다. 기본 순서는 DB에 PENDING 레코드를 먼저 남기고, 객체가 올라온 뒤 스토리지 이벤트가 도착했을 때만 상태를 확정하는 것이다. DB 커밋을 앞세우면 레코드는 있는데 객체가 없는 역방향 404를 양산한다. 이벤트 경로를 이중화해도 전달은 적어도 한 번일 뿐이므로 상태 전이는 멱등해야 한다. 발급만 하고 안 올라온 잔해와 고아 객체는 격리 프리픽스의 수명주기 만료로 상시 청소하고, 대규모 정합성 검증은 리스팅 순회 대신 인벤토리나 날짜 파티션 diff로 한다.",
+    "explanation": "스토리지 PUT과 DB 커밋은 분산 시스템의 두 쓰기라 원자적으로 묶을 수 없다. 기본 순서는 DB에 PENDING 레코드를 먼저 남기고, 객체가 올라온 뒤 스토리지 이벤트가 도착했을 때만 상태를 확정하는 것이다. 확정 레코드를 앞세우면 레코드는 있는데 객체가 없는 역방향 404를 양산한다. 이벤트 경로를 이중화해도 전달은 적어도 한 번일 뿐이므로 상태 전이는 멱등해야 한다. 발급만 하고 안 올라온 잔해와 고아 객체는 격리 프리픽스의 수명주기 만료로 상시 청소하고, 대규모 정합성 검증은 리스팅 순회 대신 인벤토리나 날짜 파티션 diff로 한다.",
     "source": "AWS S3 User Guide, Event notifications 및 Lifecycle configurations; Google Cloud Pub/Sub 문서, 메시지 전달 보장 (at-least-once)"
   },
   {
@@ -772,7 +772,7 @@
       }
     ],
     "explanation": "만료와 발급 레이트리밋이 통제하는 건 시간축과 횟수축이다. URL이 언제까지 유효한지, 누가 몇 번 URL을 받는지는 통제되지만, 창이 열려 있는 동안 무엇이 올라오는지는 이 조치들이 전혀 보지 못한다. 내용축을 통제하려면 발급 시점의 사전 제약(폼 업로드 POST 정책의 content-length-range)이나 업로드 후 이벤트 기반 사후 검증을 설계해야 한다. 만료가 업로드 도중을 끊는 타이머라고 기대하는 것도 검증 시점에 대한 오해다. 서버 경유로 돌아가는 것은 선택지이지 유일한 해법이 아니다.",
-    "source": "AWS S3 User Guide, Browser-based uploads using POST (POST policy의 content-length-range); AWS S3 User Guide, Share an object with a presigned URL"
+    "source": "AWS S3 User Guide, Browser-based uploads using POST (POST policy의 content-length-range); AWS S3 User Guide, Using presigned URLs (만료는 요청 시작 시점에 검증)"
   },
   {
     "id": "storage-presigned-signed-headers-001",

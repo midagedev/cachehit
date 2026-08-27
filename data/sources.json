@@ -41,12 +41,12 @@
     {
       "match": "Abort incomplete multipart",
       "label": "AWS S3 — 미완료 멀티파트 업로드 정리",
-      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu.html"
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html"
     },
     {
       "match": "Browser-based uploads using POST",
       "label": "AWS S3 — Browser-based uploads using POST",
-      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/HTTPPOSTForm.html"
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/HTTPPOSTForms.html"
     },
     {
       "match": "Blocking public access",
@@ -72,11 +72,6 @@
       "match": "Checking object integrity",
       "label": "AWS S3 — Checking object integrity",
       "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html"
-    },
-    {
-      "match": "Object metadata",
-      "label": "AWS S3 — Working with object metadata",
-      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html"
     },
     {
       "match": "Event notifications",
@@ -284,7 +279,7 @@
       "url": "https://developers.cloudflare.com/images/"
     },
     {
-      "match": "tus",
+      "match": "tus 프로토콜",
       "label": "tus — 재개 가능 업로드 프로토콜",
       "url": "https://tus.io/protocols/resumable-upload"
     },
@@ -497,6 +492,86 @@
       "match": "WebKit 버그 168985",
       "label": "WebKit 168985 — 저전력 모드의 무음 비디오 자동재생 차단",
       "url": "https://bugs.webkit.org/show_bug.cgi?id=168985"
+    },
+    {
+      "match": "CloudFront 요금",
+      "label": "AWS CloudFront — 요금(리전별 데이터 전송·요청 단가)",
+      "url": "https://aws.amazon.com/cloudfront/pricing/"
+    },
+    {
+      "match": "Cloud CDN 무효화",
+      "label": "Google Cloud CDN — 캐시 무효화 개요",
+      "url": "https://cloud.google.com/cdn/docs/cache-invalidation-overview"
+    },
+    {
+      "match": "Cloud Storage 요금",
+      "label": "Google Cloud Storage — 요금(인터넷 egress)",
+      "url": "https://cloud.google.com/storage/pricing"
+    },
+    {
+      "match": "GCS 체크섬",
+      "label": "Google Cloud Storage — 체크섬 검증(CRC32C·MD5)",
+      "url": "https://cloud.google.com/storage/docs/hashes-etags"
+    },
+    {
+      "match": "Pub/Sub notifications",
+      "label": "Google Cloud Storage — Pub/Sub 알림(OBJECT_FINALIZE)",
+      "url": "https://cloud.google.com/storage/docs/pubsub-notifications"
+    },
+    {
+      "match": "CF-Cache-Status",
+      "label": "Cloudflare — 캐시 상태 응답(CF-Cache-Status)",
+      "url": "https://developers.cloudflare.com/cache/concepts/cache-responses/"
+    },
+    {
+      "match": "Using presigned URLs",
+      "label": "AWS S3 — presigned URL 사용(만료·자격 증명)",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html"
+    },
+    {
+      "match": "Uploading objects with presigned URLs",
+      "label": "AWS S3 — presigned URL 업로드(Content-Type 일치)",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html"
+    },
+    {
+      "match": "multipart upload limits",
+      "label": "AWS S3 — 멀티파트 업로드 한도(파트 5MiB~5GiB)",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html"
+    },
+    {
+      "match": "CompleteMultipartUpload",
+      "label": "AWS S3 API — CompleteMultipartUpload(EntityTooSmall)",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html"
+    },
+    {
+      "match": "re:Post",
+      "label": "AWS re:Post — S3 복제와 ObjectCreated 이벤트",
+      "url": "https://repost.aws/questions/QUWy4DeorXSkOOm5otiBZPyg/does-s3-object-replication-trigger-objectcreated-event"
+    },
+    {
+      "match": "avifenc",
+      "label": "libavif — avifenc 매뉴얼(--speed)",
+      "url": "https://github.com/AOMediaCodec/libavif/blob/main/doc/avifenc.1.md"
+    },
+    {
+      "match": "미디어 컨테이너",
+      "label": "MDN — 미디어 컨테이너 포맷(WebM 구성 코덱)",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Containers"
+    },
+    {
+      "match": "비디오 코덱 가이드",
+      "label": "MDN — 웹 비디오 코덱 가이드(손실 압축)",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Video_codecs"
+    },
+    {
+      "match": "엣지 함수 제약",
+      "label": "AWS CloudFront — 엣지 함수 제약",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/edge-functions-restrictions.html"
+    },
+    {
+      "match": "ISO/IEC 23000-19",
+      "label": "ISO/IEC 23000-19 — CMAF(공통 미디어 애플리케이션 포맷)",
+      "url": "https://www.iso.org/standard/85623.html"
     }
   ]
 }
