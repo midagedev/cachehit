@@ -168,6 +168,18 @@ function checkQuestion(q) {
       err(id, `길이 편향: 정답 ${cLen}자 / 오답 평균 ${wAvg.toFixed(1)}자 = ${(cLen / wAvg).toFixed(2)}배 (상한 ${LENGTH_RATIO_MAX})`)
   }
 
+  // 문체: 사용자 노출 문자열의 엠대시 금지 (2026-08-27 래칫)
+  // "한국어가 좀 이상해요"라는 실사용자 피드백을 받고 문항 전체를 교정한 라운드에서
+  // 엠대시 116건을 콜론·접속 표현으로 바꿔 0으로 만들었다. 엠대시는 앞뒤 관계를 지나치게
+  // 함축해서 번역체로 읽히는 주범이었다. source 는 인용 문자열이라 검사하지 않는다.
+  for (const [k, s] of [['question', q.question], ['explanation', q.explanation]]) {
+    if (s && s.includes('—')) err(id, `${k} 에 엠대시(—) — 콜론이나 접속 표현으로 풀어 쓸 것`)
+  }
+  for (const [i, o] of opts.entries()) {
+    if (o.text && o.text.includes('—')) err(id, `보기 ${i} text 에 엠대시(—) — 콜론이나 접속 표현으로 풀어 쓸 것`)
+    if (o.why && o.why.includes('—')) err(id, `보기 ${i} why 에 엠대시(—) — 콜론이나 접속 표현으로 풀어 쓸 것`)
+  }
+
   // §3-4 절대 표현이 오답에만 몰리는지
   const hasAbs = (t) => ABSOLUTE_WORDS.some((w) => t.includes(w))
   const wrongAbs = wrong.filter((o) => hasAbs(o.text || '')).length
