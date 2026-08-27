@@ -1,0 +1,137 @@
+// 퀴즈 흐름의 회귀 테스트. 20문항을 자동으로 풀어 확신도 3단계와 결과 집계를 검증한다.
+//
+// 왜 있는가: 확신도 축의 집계(찍어서 맞은 문항, 그것을 뺀 점수, 재도전 대상)는 화면을
+// 끝까지 진행해야 나타나는 상태라 손으로 확인하기 번거롭고, 그래서 조용히 회귀한다.
+// `validate.mjs` 는 문항 데이터만 보고 앱 로직은 보지 않는다.
+//
+// 실행:  npx playwright install chromium   (한 번)
+//        node tools/e2e.mjs
+//
+// 로컬 HTTP 서버를 띄우지 않고 playwright 라우팅으로 파일을 서빙한다 — 리스닝 소켓이
+// 막힌 환경에서도 돌아야 하고, 포트 충돌도 없다.
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
+}
+
+let chromium
+try {
+  ({ chromium } = await import('playwright'))
+} catch {
+  console.log('playwright 가 없어 건너뜁니다. 설치: npm i -D playwright && npx playwright install chromium')
+  process.exit(0)
+}
+
+const ROUNDS = 20
+const CONF = ['sure', 'unsure', 'guess']
+
+// 정답을 미리 알고 클릭한다. 무작위로 고르면 '찍어서 맞음'이 0건인 라운드가 나오고,
+// 그러면 검증하려는 경로가 실행되지 않은 채 통과한다.
+const ANSWER = new Map(
+  JSON.parse(fs.readFileSync(path.join(ROOT, 'data/questions.json'), 'utf8'))
+    .map((q) => [q.question, q.options.find((o) => o.correct).text]))
+
+const browser = await chromium.launch()
+const page = await browser.newPage({ viewport: { width: 900, height: 1200 } })
+const jsErrors = []
+page.on('pageerror', (e) => jsErrors.push(String(e)))
+page.on('console', (m) => { if (m.type() === 'error') jsErrors.push('console: ' + m.text()) })
+
+await page.route('**/*', (route) => {
+  const u = new URL(route.request().url())
+  const file = path.join(ROOT, u.pathname === '/' ? '/index.html' : u.pathname)
+  if (!file.startsWith(ROOT) || !fs.existsSync(file))
+    return route.fulfill({ status: 404, body: 'not found' })
+  route.fulfill({
+    status: 200,
+    contentType: MIME[path.extname(file)] || 'application/octet-stream',
+    body: fs.readFileSync(file),
+  })
+})
+
+await page.goto('http://cachehit.test/', { waitUntil: 'networkidle' })
+await page.click('#btn-start')
+
+const tally = { hits: 0, luckyHits: 0, sureWrong: 0, guessWrong: 0 }
+
+for (let i = 0; i < ROUNDS; i++) {
+  await page.waitForSelector('#q-options .opt:not([disabled])')
+  const opts = await page.$$('#q-options .opt')
+  const stem = (await page.textContent('#q-text')).trim()
+  const answer = ANSWER.get(stem)
+  if (!answer) throw new Error(`발문을 questions.json 에서 못 찾음: ${stem.slice(0, 50)}`)
+  const texts = await Promise.all(opts.map((o) => o.textContent()))
+  const ci = texts.findIndex((t) => t.includes(answer))
+  if (ci < 0) throw new Error(`정답 보기를 화면에서 못 찾음: ${answer.slice(0, 50)}`)
+
+  // 확신도를 순환시키고, 절반은 맞히고 절반은 틀리게 골라 네 조합을 모두 만든다
+  const aimCorrect = i % 2 === 0
+  await opts[aimCorrect ? ci : (ci + 1) % opts.length].click()
+
+  await page.waitForSelector('#confidence:not(.hidden)')
+  const conf = CONF[i % 3]
+  await page.click(`.btn-conf[data-conf="${conf}"]`)
+
+  await page.waitForSelector('#feedback:not(.hidden)')
+  const ok = (await page.getAttribute('#verdict', 'data-r')) === 'ok'
+  if (ok) tally.hits++
+  if (ok && conf === 'guess') tally.luckyHits++
+  if (!ok && conf === 'guess') tally.guessWrong++
+  if (!ok && conf === 'sure') tally.sureWrong++
+
+  const verdict = await page.textContent('#verdict')
+  if (conf === 'guess' && ok && !verdict.includes('찍어서 맞았습니다'))
+    throw new Error('찍어서 맞은 문항에 그 사실을 알리는 문구가 없다')
+
+  await page.click('#btn-next')
+}
+
+await page.waitForSelector('#screen-result:not(.hidden)')
+const got = {
+  line: (await page.textContent('#result-line')).trim(),
+  retry: (await page.textContent('#btn-retry-wrong')).trim(),
+  guessShown: !(await page.getAttribute('#guess-block', 'class')).includes('hidden'),
+  guessCount: (await page.$$('#guess-list li')).length,
+  hyperCount: (await page.$$('#hyper-list li')).length,
+  tweet: decodeURIComponent((await page.getAttribute('#btn-tweet', 'href')).split('text=')[1].split('&')[0]),
+}
+
+const fails = []
+const solid = Math.round(((tally.hits - tally.luckyHits) / ROUNDS) * 100)
+const weak = (ROUNDS - tally.hits) + tally.luckyHits
+
+if (!tally.luckyHits) fails.push('찍어서 맞은 사례가 만들어지지 않아 검증이 성립하지 않았다')
+if (got.guessCount !== tally.luckyHits) fails.push(`찍어서 맞은 목록 ${got.guessCount} ≠ ${tally.luckyHits}`)
+if (tally.luckyHits && !got.guessShown) fails.push('찍어서 맞은 블록이 숨겨져 있다')
+if (got.hyperCount !== tally.sureWrong) fails.push(`확신 오답 목록 ${got.hyperCount} ≠ ${tally.sureWrong}`)
+if (tally.luckyHits && !got.line.includes(`${solid}%`)) fails.push(`결과 줄에 확신 점수 ${solid}% 가 없다`)
+if (tally.luckyHits && !got.tweet.includes(`${solid}%`)) fails.push('공유 문구에 확신 점수가 없다')
+if (tally.luckyHits && !got.retry.includes('찍은')) fails.push('재도전 버튼이 찍은 문항을 포함한다고 알리지 않는다')
+if (!got.retry.includes(String(weak))) fails.push(`재도전 대상 수 ${weak} 미표기: "${got.retry}"`)
+
+// 결과 카드 PNG 가 그려지는지 (canvas 렌더는 예외가 나도 조용해서 여기서만 잡힌다)
+await page.click('#btn-share')
+await page.waitForTimeout(500)
+
+await browser.close()
+
+console.log(`${ROUNDS}문항 진행 — 정답 ${tally.hits} / 찍어서 맞음 ${tally.luckyHits} / 확신 오답 ${tally.sureWrong}`)
+console.log(`  ${got.line}`)
+console.log(`  재도전: ${got.retry}`)
+if (jsErrors.length) {
+  console.log(`\nJS 오류 ${jsErrors.length}건`)
+  for (const e of jsErrors) console.log(`  ✗ ${e}`)
+}
+if (fails.length) {
+  console.log(`\n실패 ${fails.length}건`)
+  for (const f of fails) console.log(`  ✗ ${f}`)
+  console.log('\nE2E 실패')
+} else {
+  console.log('\nE2E 통과')
+}
+process.exit(fails.length || jsErrors.length ? 1 : 0)

@@ -23,3 +23,11 @@ jobs:
             git diff --stat -- data/questions.json
             exit 1
           fi
+      # 확신도 축의 집계(찍어서 맞은 문항, 그것을 뺀 점수, 재도전 대상)는 화면을 끝까지
+      # 진행해야 나타나는 상태라 손으로는 확인이 번거롭고 그래서 조용히 회귀한다.
+      - name: 브라우저 준비
+        run: |
+          npm i -D playwright@1.62.1 --no-audit --no-fund
+          npx playwright install chromium --with-deps
+      - name: 퀴즈 흐름 E2E
+        run: node tools/e2e.mjs
