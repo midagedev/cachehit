@@ -492,6 +492,11 @@
       "match": "S3 Bucket Keys",
       "label": "S3 Bucket Keys — SSE-KMS 비용 절감",
       "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html"
+    },
+    {
+      "match": "WebKit 버그 168985",
+      "label": "WebKit 168985 — 저전력 모드의 무음 비디오 자동재생 차단",
+      "url": "https://bugs.webkit.org/show_bug.cgi?id=168985"
     }
   ]
 }
