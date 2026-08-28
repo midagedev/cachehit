@@ -572,6 +572,71 @@
       "match": "ISO/IEC 23000-19",
       "label": "ISO/IEC 23000-19 — CMAF(공통 미디어 애플리케이션 포맷)",
       "url": "https://www.iso.org/standard/85623.html"
+    },
+    {
+      "match": "카카오스타일",
+      "label": "카카오스타일 테크블로그 — 웹폰트 트래픽 비용 최적화 (Vary: Origin)",
+      "url": "https://devblog.kakaostyle.com/ko/2024-06-28-1-optimize-font-traffic/"
+    },
+    {
+      "match": "Cloudflare 장애 회고",
+      "label": "Cloudflare — 2025년 11월 18일 장애 회고",
+      "url": "https://blog.cloudflare.com/18-november-2025-outage/"
+    },
+    {
+      "match": "씨미",
+      "label": "AWS 기술 블로그 — 씨미(CIME) 4K 라이브 스트리밍 플랫폼",
+      "url": "https://aws.amazon.com/ko/blogs/tech/cime-live-streaming-platform-with-amazon-ivs/"
+    },
+    {
+      "match": "데이블",
+      "label": "데이블 테크블로그 — S3 비용 절감기",
+      "url": "https://dabletech.oopy.io/14a5bbc0-e5c2-80a7-93ce-c7237cd218c8"
+    },
+    {
+      "match": "JPEG XL 지원",
+      "label": "caniuse — JPEG XL image format",
+      "url": "https://caniuse.com/jpegxl"
+    },
+    {
+      "match": "HEIC 지원",
+      "label": "caniuse — HEIF/HEIC image format",
+      "url": "https://caniuse.com/heif"
+    },
+    {
+      "match": "Safari 17.0",
+      "label": "WebKit 블로그 — WebKit Features in Safari 17.0",
+      "url": "https://webkit.org/blog/14445/webkit-features-in-safari-17-0/"
+    },
+    {
+      "match": "RTC AV1",
+      "label": "Meta Engineering — Adopting AV1 for real-time communication",
+      "url": "https://engineering.fb.com/2026/06/22/video-engineering/adopting-av1-for-real-time-communication-rtc-meta/"
+    },
+    {
+      "match": "HLS Interstitials",
+      "label": "AWS Media 블로그 — MediaTailor HLS Interstitials 지원",
+      "url": "https://aws.amazon.com/blogs/media/support-for-hls-interstitials-in-aws-elemental-mediatailor/"
+    },
+    {
+      "match": "Pinterest",
+      "label": "Pinterest Engineering — Improving ABR video performance",
+      "url": "https://medium.com/pinterest-engineering/improving-abr-video-performance-at-pinterest-f0ea47a6d4fc"
+    },
+    {
+      "match": "conditional writes",
+      "label": "AWS S3 — 조건부 쓰기(conditional writes)",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html"
+    },
+    {
+      "match": "soft delete",
+      "label": "Google Cloud Storage — soft delete",
+      "url": "https://cloud.google.com/storage/docs/soft-delete"
+    },
+    {
+      "match": "S3 — 스토리지 클래스",
+      "label": "AWS S3 — 스토리지 클래스",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html"
     }
   ]
 }

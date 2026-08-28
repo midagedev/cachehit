@@ -866,5 +866,67 @@
     ],
     "explanation": "고해상도 대응의 정석은 해상도 변형을 두고 브라우저가 기기 픽셀 밀도에 맞춰 고르게 하는 것이다. srcset의 x·w 디스크립터가 그 인터페이스고, 선택 권한을 클라이언트에 두는 이유는 서버가 요청만으로 DPR을 확실히 알 수 없기 때문이다. 하나로 통일하면 저밀도 기기가 필요보다 큰 자산을 항상 내려받고, 2x가 '바이트 2배'가 아니라 픽셀 4배 자산이라는 점에서 손해 규모도 직관과 다르다. 반대로 1x만 남기는 쪽은 고밀도 기기에서 흐릿함을 만든다.",
     "source": "HTML 표준(srcset — 픽셀 밀도·너비 디스크립터), MDN «Responsive images»"
+  },
+  {
+    "id": "image-jxl-adoption-001",
+    "topic": "image",
+    "tags": ["jpegxl", "format", "adoption"],
+    "difficulty": 2,
+    "question": "같은 품질에서 JPEG보다 20~60% 작다는 벤치마크를 근거로, Accept 협상을 전제로 JPEG XL 출력을 파이프라인에 추가하자는 제안이 나왔다. 2026년 기준, 기대 효과 평가를 좌우하는 지원 현황은?",
+    "options": [
+      {
+        "text": "Chromium이 기본 지원한 지 오래라 트래픽 대부분이 즉시 절감 이득을 본다",
+        "distractorType": "outdated",
+        "why": "Chromium은 플래그 실험만 하다 2023년 110에서 지원을 제거했다. 이후 재도입도 플래그 단계다."
+      },
+      {
+        "text": "기본 지원이 Safari 계열에 그쳐, 협상을 붙여도 적용 트래픽이 15% 수준이다",
+        "correct": true,
+        "why": "2026년 시점 기본 지원은 Safari 17 이후뿐이다. 기대 절감은 파일당 절감률에 이 적용 비율을 곱해서 평가해야 한다."
+      },
+      {
+        "text": "AVIF와 코덱 계열이 같아 AVIF를 지원하는 브라우저는 JPEG XL도 디코드한다",
+        "distractorType": "adjacent",
+        "why": "AVIF는 AV1 계열이고 JPEG XL은 별개 코덱이다. 지원 표도 완전히 다르게 갈린다."
+      },
+      {
+        "text": "주요 브라우저 전부가 플래그 없이 지원하므로 협상 없이 일괄 전환해도 된다",
+        "distractorType": "overgeneralized",
+        "why": "지원율을 부풀린 데다, 어떤 지원율에서도 일괄 전환은 미지원 사용자를 깨뜨린다."
+      }
+    ],
+    "explanation": "포맷의 지원 범위는 시간이 지나면 넓어지기만 하는 것이 아니다. JPEG XL은 Chromium이 91~109에서 플래그로 실험하다 2023년 110에서 제거했고, 같은 해 Safari 17이 지원을 시작해 2026년 현재 기본 지원은 Safari 계열 약 15%에 머문다. 파일당 20~60% 절감이라는 벤치마크가 참이어도 기대 효과는 거기에 적용 트래픽 비율을 곱한 값이고, 그 비율은 자사 트래픽의 Accept 분포로 실측해야 한다. WebP나 AVIF의 전례를 근거로 새 포맷의 보급을 낙관하는 것이 이 축의 대표적 함정이다.",
+    "source": "caniuse — JPEG XL 지원 현황, WebKit 블로그 — Safari 17.0(JPEG XL 추가)"
+  },
+  {
+    "id": "image-heic-serving-001",
+    "topic": "image",
+    "tags": ["heic", "upload", "format"],
+    "difficulty": 2,
+    "question": "아이폰 업로드 원본이 HEIC로 들어온다. 'Safari 17이 HEIC를 지원하니 변환 없이 그대로 웹에 서빙하자'는 제안이 나왔다. 판단은?",
+    "options": [
+      {
+        "text": "Safari에 이어 Chromium도 HEIF 디코드를 넣었으므로 이제 그대로 서빙해도 된다",
+        "distractorType": "outdated",
+        "why": "Chromium과 Firefox는 HEVC 특허 부담 때문에 HEIC 디코드를 넣지 않았다. 2026년 기준 기본 지원은 Safari 계열뿐이다."
+      },
+      {
+        "text": "HEIC는 컨테이너만 다른 JPEG라, 미지원 브라우저도 내부의 JPEG를 꺼내서 그린다",
+        "distractorType": "adjacent",
+        "why": "HEIC는 HEIF 컨테이너에 HEVC 부호화를 담은 포맷이다. JPEG가 들어 있는 것이 아니라 디코더 자체가 달라야 한다."
+      },
+      {
+        "text": "업로드 시점에 JPEG로 변환하고 HEIC 원본은 버려 저장 파이프라인을 단순화한다",
+        "distractorType": "one-step-short",
+        "why": "서빙 문제는 풀리지만 원본을 버린다. 더 나은 포맷으로의 재변환·고품질 재수출 여지가 사라지므로 보존과 서빙을 분리하는 쪽이 맞다."
+      },
+      {
+        "text": "HEIC는 수용·보존 포맷으로만 두고, 웹 서빙은 범용 포맷으로 변환해 내보낸다",
+        "correct": true,
+        "why": "HEIC 디코드는 Safari 계열 밖에서 지원되지 않는다. 업로드로 받아 보존하는 포맷과 서빙하는 포맷은 별개의 결정이다."
+      }
+    ],
+    "explanation": "업로드에서 수용하는 포맷과 웹에 서빙하는 포맷은 별개의 결정이다. HEIC는 HEIF 컨테이너에 HEVC로 부호화된 포맷으로, 2026년 기준 브라우저 지원은 Safari 17 이후 약 15%에 그치고 Chromium·Firefox는 HEVC 특허 라이선스 부담 때문에 디코드를 넣지 않았다. 따라서 아이폰 원본은 그대로 받아 보존하되(재변환·고품질 재수출의 원천), 서빙 경로에서는 JPEG·WebP 같은 범용 포맷으로 변환해 내보내는 것이 표준 구조다. 특정 생태계의 지원 소식 하나가 서빙 포맷 결정의 근거가 되지 못하는 이유다.",
+    "source": "WebKit 블로그 — Safari 17.0(HEIC 추가), caniuse — HEIC 지원 현황"
   }
 ]

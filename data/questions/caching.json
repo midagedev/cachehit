@@ -928,5 +928,98 @@
     ],
     "explanation": "명시 신선도가 없으면 캐시는 휴리스틱으로 수명을 추정하고, 전통적인 기준은 Last-Modified 이후 경과 구간의 일부(10% 관행)다. 수정 이력이 1년이면 추정 수명이 수 주가 되고, 핵심은 이미 퍼진 옛 사본이 배포 전 기준의 그 긴 수명을 그대로 가진 채 남아 있다는 점이다. 수정 반영이 늦어지는 창은 여기서 생긴다. 근본 대책은 이력 길이에 수명을 묶지 않는 것이다. 캐시돼도 되는 페이지에는 명시 max-age를, 즉시 반영이 필요하면 no-cache로 재검증에 맡기면 추정에 의존하는 구간이 사라진다.",
     "source": "RFC 9111 §4.2.2 (Calculating Heuristic Freshness)"
+  },
+  {
+    "id": "caching-vary-origin-001",
+    "topic": "caching",
+    "tags": ["vary", "cors", "cache-key"],
+    "difficulty": 3,
+    "question": "웹폰트 CDN의 오리진 요청과 전송 비용이 어느 시점부터 약 2배로 늘었다. 접근 로그를 보니 같은 폰트 URL인데 Origin 헤더가 있는 요청과 없는 요청이 섞여 있고, 응답에는 Vary: Origin이 붙어 있다. 원인은?",
+    "options": [
+      {
+        "text": "Vary: Origin이 붙은 응답은 공유 캐시가 매번 오리진 재검증을 요구해, 조건부 요청이 그만큼 늘어난 것",
+        "distractorType": "adjacent",
+        "why": "Vary는 재검증을 강제하지 않는다. 변형을 가르는 키 축일 뿐이고, 신선한 변형은 재검증 없이 캐시에서 서빙된다."
+      },
+      {
+        "text": "Origin 헤더가 실린 요청은 CORS 검증 때문에 CDN이 캐시를 우회하고 항상 오리진으로 넘기는 것",
+        "distractorType": "adjacent",
+        "why": "CORS 검증은 응답 헤더를 읽는 브라우저의 일이다. CDN은 Origin이 실려도 정상적으로 캐시에서 응답한다."
+      },
+      {
+        "text": "preload와 CSS 로드의 요청 모드 차이로 Origin 유무가 갈리고, Vary: Origin이 폰트를 두 변형으로 쪼갠 것",
+        "correct": true,
+        "why": "cors 모드 요청은 Origin을 싣고 no-cors 로드는 싣지 않는다. 캐시가 Origin으로 변형을 가르면 같은 URL이 두 엔트리가 되어 미스와 오리진 전송이 2배가 된다."
+      },
+      {
+        "text": "폰트처럼 CORS 대상인 자원은 요청마다 preflight(OPTIONS)가 선행되어 전체 요청 수가 2배로 불어난 것",
+        "distractorType": "one-step-short",
+        "why": "GET 폰트 요청에는 preflight가 선행되지 않는다. OPTIONS는 같은 GET URL에 헤더 유무가 갈리는 로그를 설명하지 못한다."
+      }
+    ],
+    "explanation": "같은 URL이라도 Vary에 오른 요청 헤더 값이 다르면 캐시는 다른 변형으로 저장한다. 이 사례에서는 preload가 cors 모드라 Origin 헤더를 싣고 CSS 경유 폰트 로드는 싣지 않아, 같은 폰트가 헤더 유무별로 두 번 캐시되고 있었다. 카카오스타일이 월 45만 GB, 약 4만 3천 달러 규모의 웹폰트 트래픽에서 실측한 사고로, 수정은 두 갈래였다. CDN 캐시 키에서 Origin을 빼거나 오리진 응답의 Vary: Origin을 제거하는 것인데, 캐시 키에 설정된 헤더가 Origin 하나뿐임을 확인하고 후자를 택했다. preload 자체는 FOUT 방지를 위해 유지했다. Vary는 재검증이 아니라 변형 분열을 만든다는 것, 그리고 낭비 축 하나가 히트율을 반 토막 낸다는 것을 보여 준다.",
+    "source": "카카오스타일 테크블로그(2024) — 웹폰트 트래픽 최적화(Vary: Origin 변형 분열)"
+  },
+  {
+    "id": "caching-dict-compression-001",
+    "topic": "caching",
+    "tags": ["dictionary", "compression", "vary"],
+    "difficulty": 2,
+    "question": "정적 JS를 사전 압축(dcz)으로 서빙하기 시작했다. 사전이 있는 브라우저와 없는 브라우저의 요청이 같은 URL로 들어온다. 공유 캐시가 이 응답을 안전하게 캐시하게 하려면?",
+    "options": [
+      {
+        "text": "Vary: Accept-Encoding을 붙여 압축 인코딩 축으로만 변형을 갈라 둔다",
+        "distractorType": "one-step-short",
+        "why": "dcz라는 인코딩이 같아도 어떤 사전으로 압축했는지가 다르면 응답이 다르다. 인코딩 축만으로는 사전 없는 클라이언트에 해독 불가 응답이 갈 수 있다."
+      },
+      {
+        "text": "응답을 Cache-Control: private으로 내려 공유 캐시를 아예 우회시킨다",
+        "distractorType": "adjacent",
+        "why": "저장을 포기하는 회피이지 안전하게 캐시하는 답이 아니다. 정적 JS의 공유 캐시 이득을 통째로 버리게 된다."
+      },
+      {
+        "text": "요청의 사전 식별 헤더를 캐시 키에서 제거해 어떤 사전이든 같은 엔트리를 쓰게 한다",
+        "distractorType": "inverted",
+        "why": "변형을 가르는 축을 지우는 방향이라 오염을 만든다. 다른 사전으로 압축된 응답이 서로에게 서빙된다."
+      },
+      {
+        "text": "Vary에 Accept-Encoding과 Available-Dictionary를 함께 올려 변형을 가른다",
+        "correct": true,
+        "why": "사전 압축 응답의 변형은 요청의 Available-Dictionary 헤더가 가른다. RFC 9842는 캐시 가능한 사전 압축 응답에 이 Vary를 요구한다."
+      }
+    ],
+    "explanation": "사전 압축(RFC 9842)에서는 클라이언트가 Available-Dictionary 헤더로 자기가 가진 사전의 해시를 광고하고, 서버가 그 사전으로 압축한 dcb/dcz 응답을 내린다. 같은 URL, 같은 Content-Encoding이라도 어떤 사전을 썼는지에 따라 응답 바이트가 다르므로, 캐시 가능한 응답은 Vary에 Accept-Encoding과 Available-Dictionary를 함께 올려야 한다. 사전 리소스 자체도 신선하거나 stale 서빙이 허용된 상태여야 한다는 조건이 규격에 있다. 새 압축 축이 곧 새 캐시 변형 축이라는 일반 원리의 최신 사례다.",
+    "source": "RFC 9842 (HTTP Compression Dictionary Transport)"
+  },
+  {
+    "id": "caching-cache-status-stale-001",
+    "topic": "caching",
+    "tags": ["cache-status", "stale", "observability"],
+    "difficulty": 2,
+    "question": "관측 표준화를 위해 CDN이 Cache-Status 응답 헤더를 내리게 했다. 어떤 응답에 Cache-Status: cdn; hit; ttl=-87 이 찍혀 있다. 이 응답의 해석은?",
+    "options": [
+      {
+        "text": "hit과 양립하는 것은 신선한 서빙뿐이므로, 이 항목은 fwd; stale로 기록됐어야 한다",
+        "distractorType": "adjacent",
+        "why": "배타 관계는 hit과 fwd 사이에만 있다. stale 엔트리를 그대로 서빙하면 hit이고, 재검증이나 원서버 전달이 일어났을 때만 fwd가 된다."
+      },
+      {
+        "text": "신선 수명을 87초 넘긴 엔트리를 서빙했다. hit이면서 stale인 것은 규격상 성립한다",
+        "correct": true,
+        "why": "ttl은 남은 신선 수명이라 음수는 그만큼 지났다는 뜻이다. stale-while-revalidate 같은 정책이면 낡은 엔트리를 hit으로 서빙할 수 있다."
+      },
+      {
+        "text": "ttl은 엔트리가 저장된 뒤 지난 시간(age)이라, 음수는 캐시 계층 간 시계 오차를 뜻한다",
+        "distractorType": "adjacent",
+        "why": "ttl은 age가 아니라 남은 신선 수명이다. 음수는 오차가 아니라 수명 경과를 뜻하는 정상 표기다."
+      },
+      {
+        "text": "stale-while-revalidate 유예 창까지 소진한 서빙이므로 이 응답은 규격 위반이다",
+        "distractorType": "overgeneralized",
+        "why": "Cache-Status는 무엇이 일어났는지 적는 관측 헤더이지 위반 판정이 아니고, ttl 음수만으로는 유예 창 소진 여부를 알 수 없다."
+      }
+    ],
+    "explanation": "Cache-Status(RFC 9211)는 응답이 거쳐 온 캐시들이 항목을 하나씩 덧붙이는 리스트형 헤더로, 오리진에 가까운 캐시가 앞에 온다. 각 항목에서 배타인 쌍은 hit과 fwd(전달 사유)이지 hit과 stale이 아니다. ttl 파라미터는 남은 신선 수명을 초로 적으므로 음수는 신선 수명을 그만큼 넘긴 stale 상태를 뜻하고, hit; ttl=-87 은 stale-while-revalidate 류의 정책으로 낡은 엔트리를 서빙했다는 관측이 된다. 벤더 고유 헤더(X-Cache 등)와 달리 멀티 CDN에서 같은 문법으로 읽을 수 있다는 것이 이 헤더의 존재 이유다.",
+    "source": "RFC 9211 (The Cache-Status HTTP Response Header Field)"
   }
 ]
